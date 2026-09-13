@@ -17,6 +17,7 @@ android/captures/
 .env
 .env.*
 !.env.example
+!client/.env.production
 
 # Logs
 *.log
