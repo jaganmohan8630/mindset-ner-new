@@ -1,0 +1,14 @@
+{
+  "name": "MINDSET-NER Patient App",
+  "short_name": "MINDSET-NER",
+  "description": "A simple cognitive companion for patients.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7faf5",
+  "theme_color": "#4f7654",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

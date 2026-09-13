@@ -1,0 +1,16 @@
+{
+  "appId": "com.mindsetner.app",
+  "appName": "MINDSET-NER",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "http"
+  },
+  "android": {
+    "allowMixedContent": true
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
+}

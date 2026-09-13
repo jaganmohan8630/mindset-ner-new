@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MINDSET-NER</string>
+    <string name="title_activity_main">MINDSET-NER</string>
+    <string name="package_name">com.mindsetner.app</string>
+    <string name="custom_url_scheme">com.mindsetner.app</string>
+</resources>
