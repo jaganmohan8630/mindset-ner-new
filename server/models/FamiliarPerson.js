@@ -8,6 +8,9 @@ const familiarPersonSchema = new mongoose.Schema(
     photo: {
       filename: { type: String, required: true },
       mimeType: { type: String, required: true },
+      // Keep the image with its metadata in MongoDB. Render's local filesystem
+      // is ephemeral, so a filename alone is not durable in production.
+      data: { type: Buffer },
       uploadedAt: { type: Date, default: Date.now },
     },
     isActive: { type: Boolean, default: true },

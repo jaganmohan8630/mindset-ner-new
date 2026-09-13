@@ -23,12 +23,16 @@ const ensurePatientOnly = (req, res, next) => {
   next();
 };
 
-const savePhoto = (file) => {
-  fs.mkdirSync(uploadDirectory, { recursive: true });
+const createPhoto = (file) => {
   const extension = file.mimetype === "image/png" ? ".png" : file.mimetype === "image/webp" ? ".webp" : ".jpg";
   const filename = `${crypto.randomUUID()}${extension}`;
-  fs.writeFileSync(path.join(uploadDirectory, filename), file.buffer);
-  return filename;
+  return { filename, mimeType: file.mimetype, data: file.buffer };
+};
+
+const personResponse = (person) => {
+  const result = person.toObject();
+  if (result.photo) delete result.photo.data;
+  return result;
 };
 
 const authorizedPerson = async (req, res, next) => {
@@ -41,7 +45,7 @@ const authorizedPerson = async (req, res, next) => {
 
 router.get("/:patientId", protect, authorizePatient, async (req, res) => {
   const people = await FamiliarPerson.find({ patientId: req.params.patientId, isActive: true })
-    .select("name photo createdAt")
+    .select("name photo.filename photo.mimeType photo.uploadedAt createdAt")
     .sort({ name: 1 });
   res.json({ success: true, people });
 });
@@ -56,16 +60,15 @@ router.post("/", protect, upload.single("photo"), authorizePatient, async (req, 
       return res.status(403).json({ success: false, message: "Only connected caregivers can add familiar people" });
     }
 
-    const filename = savePhoto(req.file);
     const person = await FamiliarPerson.create({
       patientId: req.body.patientId,
       createdBy: req.user.userId,
       name,
-      photo: { filename, mimeType: req.file.mimetype },
+      photo: createPhoto(req.file),
     });
     const { emitPatientEvent } = require("../sockets/socketServer");
     emitPatientEvent(req.app.get("io"), person.patientId, "familiarity:updated", { action: "created" });
-    return res.status(201).json({ success: true, person });
+    return res.status(201).json({ success: true, person: personResponse(person) });
   } catch (error) {
     return res.status(400).json({ success: false, message: "Could not save familiar person", error: error.message });
   }
@@ -85,8 +88,7 @@ router.put("/:personId", protect, upload.single("photo"), authorizedPerson, asyn
     const previousFilename = req.familiarPerson.photo?.filename;
     if (name) req.familiarPerson.name = name;
     if (req.file) {
-      const filename = savePhoto(req.file);
-      req.familiarPerson.photo = { filename, mimeType: req.file.mimetype };
+      req.familiarPerson.photo = createPhoto(req.file);
     }
     await req.familiarPerson.save();
 
@@ -96,7 +98,7 @@ router.put("/:personId", protect, upload.single("photo"), authorizedPerson, asyn
 
     const { emitPatientEvent } = require("../sockets/socketServer");
     emitPatientEvent(req.app.get("io"), req.familiarPerson.patientId, "familiarity:updated", { action: "updated" });
-    return res.json({ success: true, person: req.familiarPerson });
+    return res.json({ success: true, person: personResponse(req.familiarPerson) });
   } catch (error) {
     return res.status(400).json({ success: false, message: "Could not update familiar person", error: error.message });
   }
@@ -116,15 +118,23 @@ router.delete("/:personId", protect, authorizedPerson, async (req, res) => {
 // Images are never public URLs. The browser fetches this endpoint with its
 // bearer token and displays the returned Blob locally.
 router.get("/photo/:personId", protect, authorizedPerson, (req, res) => {
-  const filePath = path.join(uploadDirectory, req.familiarPerson.photo.filename);
+  const { photo } = req.familiarPerson;
+  if (photo?.data?.length) {
+    res.type(photo.mimeType);
+    return res.send(photo.data);
+  }
+
+  // Preserve local access to photos uploaded before this change. Production
+  // uploads are stored in MongoDB and do not depend on this fallback.
+  const filePath = path.join(uploadDirectory, photo.filename);
   if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, message: "Photo not found" });
-  res.type(req.familiarPerson.photo.mimeType);
+  res.type(photo.mimeType);
   return res.sendFile(filePath);
 });
 
 router.get("/training/:patientId", protect, authorizePatient, ensurePatientOnly, async (req, res) => {
   const people = await FamiliarPerson.find({ patientId: req.params.patientId, isActive: true })
-    .select("name photo")
+    .select("name")
     .lean();
   if (people.length < 2) {
     return res.status(400).json({ success: false, message: "At least two familiar people are needed before training can begin" });
