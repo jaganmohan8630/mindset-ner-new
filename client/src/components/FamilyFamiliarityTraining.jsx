@@ -25,6 +25,7 @@ function FamilyFamiliarityTraining({ onBack, language = "en-IN" }) {
   const [totalPeople, setTotalPeople] = useState(0);
   const peopleRef = useRef([]);
   const photoCacheRef = useRef(new Map());
+  const completionInFlightRef = useRef(false);
   const user = JSON.parse(localStorage.getItem("mindset_ner_user") || "null");
   const patientId = user?.patientId;
   const token = localStorage.getItem("mindset_ner_token");
@@ -131,11 +132,46 @@ function FamilyFamiliarityTraining({ onBack, language = "en-IN" }) {
     if (person?.name && photoUrl) speakName(person.name);
   }, [person, photoUrl]);
 
-  const showNextPerson = () => {
+  const saveCompletedSession = async () => {
+    const totalQuestions = peopleRef.current.length;
+    const response = await fetch(`${API_URL}/api/games/sessions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        patientId,
+        gameType: "familyFamiliarity",
+        difficulty: 1,
+        score: 100,
+        totalQuestions,
+        correctAnswers: totalQuestions,
+        accuracy: 100,
+        averageResponseTime: 0,
+        playedOffline: false,
+        synced: true,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || "Could not save familiarity session");
+  };
+
+  const showNextPerson = async () => {
     if (personIndex + 1 >= totalPeople) {
-      setPhotoUrl("");
-      setPerson(null);
-      setPersonIndex(totalPeople);
+      if (completionInFlightRef.current) return;
+      completionInFlightRef.current = true;
+      setError("");
+      try {
+        await saveCompletedSession();
+        setPhotoUrl("");
+        setPerson(null);
+        setPersonIndex(totalPeople);
+      } catch (saveError) {
+        setError(saveError.message);
+      } finally {
+        completionInFlightRef.current = false;
+      }
       return;
     }
     const nextIndex = personIndex + 1;
