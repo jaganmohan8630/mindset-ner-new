@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { API_URL } from "../api";
 import { socket } from "../socket";
 import EmergencyAlertMap from "./EmergencyAlertMap";
-import { caregiverText } from "../caregiverTranslations";
+import { getUIText } from "../uiTranslations";
 import {
   requestEmergencyNotificationPermission,
   hasEmergencyNotificationPermission,
@@ -10,7 +10,9 @@ import {
 } from "../emergencyNotifications";
 
 const formatTime = (value) => new Date(value).toLocaleString();
-const formatDistance = (value) => value >= 1000 ? `${(value / 1000).toFixed(2)} km outside` : `${Math.round(value)} m outside`;
+const formatDistance = (value, t) => (value >= 1000
+  ? t("distanceKilometersOutside").replace("{distance}", (value / 1000).toFixed(2))
+  : t("distanceMetersOutside").replace("{distance}", Math.round(value)));
 const directionsUrl = (alert) => {
   const origin = `${alert.safeZone.latitude},${alert.safeZone.longitude}`;
   const destination = `${alert.lastKnownLocation.latitude},${alert.lastKnownLocation.longitude}`;
@@ -18,7 +20,12 @@ const directionsUrl = (alert) => {
 };
 
 function CaregiverEmergencyAlerts({ patient, language = "en-IN" }) {
-  const t = (key) => caregiverText(language, key);
+  const t = (key, params) => getUIText(language, key, params);
+  const alertStatusLabel = (value) => ({
+    active: t("activeAlert"),
+    acknowledged: t("acknowledged"),
+    resolved: t("resolved"),
+  })[value] || value;
   const [alerts, setAlerts] = useState([]);
   const [zone, setZone] = useState(() => ({
     enabled: Boolean(patient?.safeZone?.enabled),
@@ -68,9 +75,9 @@ function CaregiverEmergencyAlerts({ patient, language = "en-IN" }) {
         body: JSON.stringify({ enabled: zone.enabled, latitude: Number(zone.latitude), longitude: Number(zone.longitude), radiusMeters: Number(zone.radiusMeters) }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Unable to save safe zone");
+      if (!response.ok) throw new Error(data.message || t("unableToSaveSafeZone"));
       setZone(data.safeZone);
-      setMessage(zone.enabled ? "Safe zone is active." : "Safe zone is saved but monitoring is off.");
+      setMessage(zone.enabled ? t("safeZoneActive") : t("safeZoneMonitoringOff"));
     } catch (error) { setMessage(error.message); } finally { setSaving(false); }
   };
 
@@ -85,23 +92,23 @@ function CaregiverEmergencyAlerts({ patient, language = "en-IN" }) {
   const enableNotifications = async () => {
     const enabled = await requestEmergencyNotificationPermission();
     setNotificationsEnabled(enabled);
-    setMessage(enabled ? "Emergency notifications are enabled on this device." : "Notification permission was not granted. Enable it in browser or app settings.");
+    setMessage(enabled ? t("emergencyNotificationsEnabled") : t("notificationPermissionBrowserSettings"));
   };
   const testNotifications = async () => {
     const enabled = await requestEmergencyNotificationPermission();
     setNotificationsEnabled(enabled);
     if (!enabled) {
-      setMessage("Notification permission was not granted. Enable it in Android app settings.");
+      setMessage(t("notificationPermissionAndroidSettings"));
       return;
     }
-    const sent = await sendEmergencyTestNotification();
-    setMessage(sent ? "Test emergency notification sent. Check the notification shade." : "Test notification could not be sent.");
+    const sent = await sendEmergencyTestNotification(language);
+    setMessage(sent ? t("testEmergencyNotificationSent") : t("testNotificationNotSent"));
   };
   return (
     <section className="caregiver-card emergency-alerts-card">
       <div className="caregiver-section-heading">
         <p className="eyebrow">{t("patientSafety").toUpperCase()}</p><h2>{t("emergencyAlerts")}</h2>
-        <p>{currentAlerts.length ? `${currentAlerts.length} ${t("alertsNeedAttention")}` : t("noActiveAlerts")}</p>
+        <p>{currentAlerts.length ? t("alertsNeedAttentionCount", { count: currentAlerts.length }) : t("noActiveAlerts")}</p>
         <div className="emergency-notification-actions"><button type="button" className="enable-emergency-notifications" onClick={enableNotifications}>{notificationsEnabled ? t("notificationsEnabled") : t("enableNotifications")}</button><button type="button" className="enable-emergency-notifications" onClick={testNotifications}>{t("sendTestNotification")}</button></div>
       </div>
       <form className="safe-zone-form" onSubmit={saveZone}>
@@ -114,13 +121,13 @@ function CaregiverEmergencyAlerts({ patient, language = "en-IN" }) {
       {message && <p className="safe-zone-message">{message}</p>}
       <div className="emergency-alert-list">
         {visibleAlerts.map((alert) => <article className={`emergency-alert ${alert.status}`} key={alert._id}>
-          <div><strong>{t("wanderingAlert")} — {caregiverText(language, alert.status)}</strong><p>{formatTime(alert.createdAt)} · {formatDistance(alert.distanceFromSafeZoneMeters)}</p><small>{t("lastKnown")}: {alert.lastKnownLocation.latitude.toFixed(5)}, {alert.lastKnownLocation.longitude.toFixed(5)} ({formatTime(alert.lastKnownLocation.capturedAt)})</small></div>
-          <EmergencyAlertMap alert={alert} />
+          <div><strong>{t("wanderingAlert")} — {alertStatusLabel(alert.status)}</strong><p>{formatTime(alert.createdAt)} · {formatDistance(alert.distanceFromSafeZoneMeters, t)}</p><small>{t("lastKnown")}: {alert.lastKnownLocation.latitude.toFixed(5)}, {alert.lastKnownLocation.longitude.toFixed(5)} ({formatTime(alert.lastKnownLocation.capturedAt)})</small></div>
+          <EmergencyAlertMap alert={alert} language={language} />
           <a className="emergency-directions-link" href={directionsUrl(alert)} target="_blank" rel="noreferrer" aria-label={t("directions")}>{t("directions")}</a>
           {alert.status === "active" && <button onClick={() => updateAlert(alert._id, "acknowledge")}>{t("acknowledge")}</button>}
           {alert.status !== "resolved" && <button onClick={() => updateAlert(alert._id, "resolve")}>{t("resolve")}</button>}
         </article>)}
-        {alerts.length > 5 && <button type="button" className="show-all-emergency-alerts" onClick={() => setShowAllAlerts((showing) => !showing)}>{showAllAlerts ? t("showLess") : `${t("showAll")} ${alerts.length} ${t("alerts")}`}</button>}
+        {alerts.length > 5 && <button type="button" className="show-all-emergency-alerts" onClick={() => setShowAllAlerts((showing) => !showing)}>{showAllAlerts ? t("showLess") : t("showAllAlertsCount", { count: alerts.length })}</button>}
       </div>
     </section>
   );

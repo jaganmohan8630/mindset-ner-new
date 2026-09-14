@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { API_URL } from "../api";
 import { socket } from "../socket";
+import { getUIText } from "../uiTranslations";
 
-function CaregiverRequests() {
+function CaregiverRequests({ language = "en-IN" }) {
+  const t = (key) => getUIText(language, key);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -31,7 +33,7 @@ function CaregiverRequests() {
 
       if (!response.ok) {
         throw new Error(
-          data.message || "Failed to load connection requests",
+          data.message || t("failedToLoadConnectionRequests"),
         );
       }
 
@@ -90,7 +92,7 @@ function CaregiverRequests() {
 
       if (!response.ok) {
         throw new Error(
-          data.message || `Failed to ${action} request`,
+          data.message || t("failedToProcessConnectionRequest"),
         );
       }
 
@@ -108,13 +110,13 @@ function CaregiverRequests() {
   if (loading || (requests.length === 0 && !error && !message)) return null;
 
   return (
-    <div className="caregiver-request-overlay" role="dialog" aria-modal="true" aria-label="Caregiver connection requests">
+    <div className="caregiver-request-overlay" role="dialog" aria-modal="true" aria-label={t("connectionRequests")}>
       <section className="caregiver-request-modal">
         <div className="caregiver-request-modal-heading">
           <div className="caregiver-request-bell" aria-hidden="true">♧</div>
           <div>
-            <p>NEW CONNECTION REQUEST{requests.length > 1 ? "S" : ""}</p>
-            <h2>Someone wants to support you</h2>
+            <p>{t("connectionRequestCount").replace("{count}", String(requests.length))}</p>
+            <h2>{t("supportYou")}</h2>
           </div>
           <span className="caregiver-request-count">{requests.length}</span>
         </div>
@@ -129,16 +131,16 @@ function CaregiverRequests() {
               <article key={request._id} className="caregiver-request-item">
                 <div className="caregiver-request-avatar" aria-hidden="true">♧</div>
                 <div className="caregiver-request-copy">
-                  <strong>{caregiver?.name || "Caregiver"}</strong>
-                  <small>{caregiver?.email || "Verified caregiver"}</small>
-                  <p>would like to connect with you as your caregiver.</p>
+                  <strong>{caregiver?.name || t("caregiver")}</strong>
+                  <small>{caregiver?.email || t("verifiedCaregiver")}</small>
+                  <p>{t("caregiverRequest")}</p>
                 </div>
                 <div className="caregiver-request-actions">
                   <button className="caregiver-reject-button" onClick={() => handleRequest(request._id, "reject")} disabled={Boolean(processingId)}>
-                    {processingId === request._id ? "Please wait..." : "Not now"}
+                    {processingId === request._id ? t("pleaseWait") : t("notNow")}
                   </button>
                   <button className="caregiver-accept-button" onClick={() => handleRequest(request._id, "accept")} disabled={Boolean(processingId)}>
-                    {processingId === request._id ? "Please wait..." : "Accept request"}
+                    {processingId === request._id ? t("pleaseWait") : t("acceptRequest")}
                   </button>
                 </div>
               </article>
@@ -146,7 +148,7 @@ function CaregiverRequests() {
           })}
         </div>
 
-        <p className="caregiver-request-privacy"><span aria-hidden="true">♢</span> You choose who can view your progress. You can manage connections later.</p>
+        <p className="caregiver-request-privacy"><span aria-hidden="true">♢</span> {t("connectionPrivacy")}</p>
       </section>
     </div>
   );

@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { API_URL } from "../api";
+import { getUIText } from "../uiTranslations";
 
-function FamiliarPeopleManager({ patientId }) {
+function FamiliarPeopleManager({ patientId, language = "en-IN" }) {
+  const t = (key) => getUIText(language, key);
+  const formatText = (key, values) => Object.entries(values).reduce(
+    (text, [name, value]) => text.replaceAll(`{${name}}`, value),
+    t(key),
+  );
   const [people, setPeople] = useState([]);
   const [name, setName] = useState("");
   const [photo, setPhoto] = useState(null);
@@ -17,7 +23,7 @@ function FamiliarPeopleManager({ patientId }) {
   const loadPeople = async () => {
     const response = await fetch(`${API_URL}/api/familiar-people/${patientId}`, { headers: { Authorization: `Bearer ${token}` } });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.message || "Could not load familiar people");
+    if (!response.ok) throw new Error(data.message || t("couldNotLoadFamiliarPeople"));
     setPeople(data.people || []);
   };
 
@@ -52,9 +58,9 @@ function FamiliarPeopleManager({ patientId }) {
       formData.append("patientId", patientId); formData.append("name", name.trim()); formData.append("photo", photo);
       const response = await fetch(`${API_URL}/api/familiar-people`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Could not add familiar person");
+      if (!response.ok) throw new Error(data.message || t("couldNotAddFamiliarPerson"));
       setName(""); setPhoto(null); event.target.reset(); await loadPeople();
-      setMessage("Familiar person added. The patient can now train with this photo.");
+      setMessage(t("familiarPersonAdded"));
     } catch (error) { setMessage(error.message); } finally { setSaving(false); }
   };
 
@@ -72,24 +78,24 @@ function FamiliarPeopleManager({ patientId }) {
       if (editPhoto) formData.append("photo", editPhoto);
       const response = await fetch(`${API_URL}/api/familiar-people/${personId}`, { method: "PUT", headers: { Authorization: `Bearer ${token}` }, body: formData });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Could not update familiar person");
+      if (!response.ok) throw new Error(data.message || t("couldNotUpdateFamiliarPerson"));
       setEditingId(""); setEditName(""); setEditPhoto(null); await loadPeople();
-      setMessage("Familiar person updated.");
+      setMessage(t("familiarPersonUpdated"));
     } catch (error) { setMessage(error.message); } finally { setSaving(false); }
   };
 
   const removePerson = async (personId) => {
-    if (!window.confirm("Remove this familiar person from training?")) return;
+    if (!window.confirm(t("confirmRemoveFamiliarPerson"))) return;
     try {
       const response = await fetch(`${API_URL}/api/familiar-people/${personId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Could not remove familiar person");
+      if (!response.ok) throw new Error(data.message || t("couldNotRemoveFamiliarPerson"));
       await loadPeople();
     } catch (error) { setMessage(error.message); }
   };
 
   const visiblePeople = showAllPeople ? people : people.slice(0, 5);
-  return <section className="caregiver-card familiar-people-card"><div className="caregiver-section-heading"><p className="eyebrow">FAMILY FAMILIARITY</p><h2>Familiar people training</h2><p>Add, review, or update a name and photo for this patient. Photos are private to their connected care team and patient account.</p></div><form className="familiar-person-form" onSubmit={addPerson}><input value={name} onChange={(event) => setName(event.target.value)} maxLength="100" placeholder="Person's name" aria-label="Person's name" required /><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] || null)} aria-label="Person's photo" required /><button type="submit" disabled={saving}>{saving ? "Adding..." : "Add person"}</button></form><p className="familiar-people-help">Use a clear JPEG, PNG, or WebP image up to 5 MB. Select Edit to change a saved name or photo.</p>{message && <p className="familiar-people-message">{message}</p>}<div className="familiar-people-list">{visiblePeople.map((person) => editingId === person._id ? <form className="familiar-person-edit" key={person._id} onSubmit={(event) => saveEdit(event, person._id)}><img className="familiar-person-thumbnail" src={photoPreviews[person._id]} alt={`Photo of ${person.name}`} /><input value={editName} onChange={(event) => setEditName(event.target.value)} maxLength="100" aria-label={`Name for ${person.name}`} /><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setEditPhoto(event.target.files?.[0] || null)} aria-label={`Replacement photo for ${person.name}`} /><button type="submit" disabled={saving}>Save</button><button type="button" onClick={() => setEditingId("")}>Cancel</button></form> : <div key={person._id} className="familiar-person-row">{photoPreviews[person._id] ? <img className="familiar-person-thumbnail" src={photoPreviews[person._id]} alt={`Photo of ${person.name}`} /> : <span className="familiar-person-placeholder" aria-hidden="true">Person</span>}<strong>{person.name}</strong><button type="button" className="edit-familiar-person" onClick={() => beginEdit(person)}>Edit</button><button type="button" onClick={() => removePerson(person._id)}>Remove</button></div>)}{people.length === 0 && <p className="caregiver-empty-state compact">No familiar people added yet.</p>}</div>{people.length > 5 && <button type="button" className="show-all-familiar-people" onClick={() => setShowAllPeople((showing) => !showing)} aria-expanded={showAllPeople}>{showAllPeople ? "Show less" : `Show all ${people.length} people`}</button>}</section>;
+  return <section className="caregiver-card familiar-people-card"><div className="caregiver-section-heading"><p className="eyebrow">{t("familyFamiliarity").toUpperCase()}</p><h2>{t("familiarPeopleTraining")}</h2><p>{t("familiarPeopleDescription")}</p></div><form className="familiar-person-form" onSubmit={addPerson}><input value={name} onChange={(event) => setName(event.target.value)} maxLength="100" placeholder={t("personName")} aria-label={t("personName")} required /><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] || null)} aria-label={t("personPhoto")} required /><button type="submit" disabled={saving}>{saving ? t("adding") : t("addPerson")}</button></form><p className="familiar-people-help">{t("familiarPeopleImageHelp")}</p>{message && <p className="familiar-people-message">{message}</p>}<div className="familiar-people-list">{visiblePeople.map((person) => editingId === person._id ? <form className="familiar-person-edit" key={person._id} onSubmit={(event) => saveEdit(event, person._id)}><img className="familiar-person-thumbnail" src={photoPreviews[person._id]} alt={formatText("photoOfPerson", { name: person.name })} /><input value={editName} onChange={(event) => setEditName(event.target.value)} maxLength="100" aria-label={formatText("nameForPerson", { name: person.name })} /><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setEditPhoto(event.target.files?.[0] || null)} aria-label={formatText("replacementPhotoForPerson", { name: person.name })} /><button type="submit" disabled={saving}>{t("save")}</button><button type="button" onClick={() => setEditingId("")}>{t("cancel")}</button></form> : <div key={person._id} className="familiar-person-row">{photoPreviews[person._id] ? <img className="familiar-person-thumbnail" src={photoPreviews[person._id]} alt={formatText("photoOfPerson", { name: person.name })} /> : <span className="familiar-person-placeholder" aria-hidden="true">{t("person")}</span>}<strong>{person.name}</strong><button type="button" className="edit-familiar-person" onClick={() => beginEdit(person)}>{t("edit")}</button><button type="button" onClick={() => removePerson(person._id)}>{t("remove")}</button></div>)}{people.length === 0 && <p className="caregiver-empty-state compact">{t("noFamiliarPeopleAdded")}</p>}</div>{people.length > 5 && <button type="button" className="show-all-familiar-people" onClick={() => setShowAllPeople((showing) => !showing)} aria-expanded={showAllPeople}>{showAllPeople ? t("showLess") : formatText("showAllPeople", { count: people.length })}</button>}</section>;
 }
 
 export default FamiliarPeopleManager;

@@ -4,8 +4,10 @@ import { TextToSpeech } from "@capacitor-community/text-to-speech";
 import { API_URL } from "../api";
 import { socket } from "../socket";
 import { syncReminderNotifications } from "../reminderNotifications";
+import { getUIText } from "../uiTranslations";
 
-function PatientReminders() {
+function PatientReminders({ language = "en-IN" }) {
+  const t = (key) => getUIText(language, key);
   const [reminders, setReminders] = useState([]);
   const [activeReminder, setActiveReminder] = useState(null);
 
@@ -65,7 +67,7 @@ function PatientReminders() {
       const currentReminders = data.reminders || [];
       setReminders(currentReminders);
       window.dispatchEvent(new Event("mindset-ner:reminders-refreshed"));
-      await syncReminderNotifications(currentReminders);
+      await syncReminderNotifications(currentReminders, language);
     } catch (error) {
       console.error("Failed to load patient reminders:", error);
     }
@@ -129,6 +131,14 @@ function PatientReminders() {
     }
 
     return "Reminder";
+  };
+
+  const getReminderDisplayLabel = (type) => {
+    if (type === "medicine") return t("medicine");
+    if (type === "hydration") return t("hydration");
+    if (type === "daily_activity") return t("dailyActivity");
+    if (type === "appointment") return t("appointment");
+    return t("reminder");
   };
 
   const getReminderKey = (reminder, date = new Date()) => {
@@ -518,12 +528,12 @@ function PatientReminders() {
               {getReminderIcon(activeReminder.type)}
             </div>
 
-            <p className="eyebrow">REMINDER</p>
+            <p className="eyebrow">{t("reminder")}</p>
 
             <h2>{activeReminder.title}</h2>
 
             <p className="patient-reminder-type">
-              {getReminderLabel(activeReminder.type)}
+              {getReminderDisplayLabel(activeReminder.type)}
             </p>
 
             {activeReminder.description && (
@@ -605,7 +615,7 @@ function PatientReminders() {
                 }
               }}
             >
-              ✓ Got It
+              ✓ {t("gotIt")}
             </button>
           </div>
         </div>

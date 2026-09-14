@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { API_URL } from "../api";
-import { caregiverText } from "../caregiverTranslations";
+import { getUIText } from "../uiTranslations";
 
 function CaregiverConnectPatient({ onBack, language = "en-IN" }) {
-  const t = (key) => caregiverText(language, key);
+  const t = (key) => getUIText(language, key);
   const [patientId, setPatientId] = useState("");
   const [patient, setPatient] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -14,7 +14,7 @@ function CaregiverConnectPatient({ onBack, language = "en-IN" }) {
 
   const searchPatient = async () => {
     if (!patientId.trim()) {
-      setError("Please enter a Patient ID.");
+      setError(t("pleaseEnterPatientId"));
       return;
     }
 
@@ -36,7 +36,7 @@ function CaregiverConnectPatient({ onBack, language = "en-IN" }) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Patient not found");
+        throw new Error(data.message || t("patientNotFound"));
       }
 
       setPatient(data.patient);
@@ -70,10 +70,10 @@ function CaregiverConnectPatient({ onBack, language = "en-IN" }) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to send connection request");
+        throw new Error(data.message || t("failedToSendConnectionRequest"));
       }
 
-      setMessage("Connection request sent successfully.");
+      setMessage(t("connectionRequestSentSuccessfully"));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -95,7 +95,7 @@ function CaregiverConnectPatient({ onBack, language = "en-IN" }) {
           <p>{t("connectPatientHelp")}</p>
         </section>
 
-        <section className="connect-workspace" aria-label="Patient connection">
+        <section className="connect-workspace" aria-label={t("connection")}>
           <div className="connect-search-card">
             <div className="connect-card-heading">
               <span className="connect-step">1</span>
@@ -109,7 +109,7 @@ function CaregiverConnectPatient({ onBack, language = "en-IN" }) {
                 value={patientId}
                 onChange={(event) => setPatientId(event.target.value)}
                 onKeyDown={(event) => { if (event.key === "Enter") searchPatient(); }}
-                placeholder="e.g. PAT-12345"
+                placeholder={t("patientCodeExample")}
                 autoComplete="off"
               />
               <button onClick={searchPatient} disabled={loading}>{loading ? t("searching") : t("searchPatient")}</button>

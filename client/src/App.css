@@ -89,6 +89,9 @@
 .caregiver-home-content::before { content: "🧠"; width: 88px; height: 88px; display: grid; place-items: center; margin: 0 auto 15px; border-radius: 50%; background: #e9f4e8; font-size: 40px; }
 .caregiver-home-content h1 { font-size: 50px; letter-spacing: -.04em; }.caregiver-home-content h1::before { content: "MINDSET NER"; display: block; margin-bottom: 17px; color: #3f724e; font-size: 15px; letter-spacing: .2em; }
 .caregiver-home-content .welcome-text { max-width: 600px; margin: 14px auto 22px; font-size: 18px; line-height: 1.55; }
+.caregiver-language-control { margin: 0 auto 22px; text-align: center; }
+.caregiver-language-control .dashboard-language-selector { display: inline-flex; align-items: center; gap: 10px; color: #355d3b; font-size: 16px; font-weight: 700; }
+.caregiver-language-control select { min-height: 42px; padding: 7px 12px; border: 1px solid #c9dfcc; border-radius: 9px; background: #fff; color: #214f30; font: inherit; }
 .caregiver-home-divider { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 0 auto 26px; color: #548a61; }.caregiver-home-divider i { width: 92px; height: 1px; background: #9dc7a4; }.caregiver-home-divider span { font-size: 21px; }
 .caregiver-action-grid { max-width: 1050px; display: grid; grid-template-columns: repeat(3,1fr); gap: 34px; margin: 0 auto 27px; }
 .caregiver-action-card { position: relative; min-height: 300px; padding: 24px 27px 20px; border: 1px solid; border-radius: 16px; background: #fff; color: #123e25; font: inherit; cursor: pointer; transition: transform .18s ease, box-shadow .18s ease; }.caregiver-action-card:hover,.caregiver-logout-card:hover { transform: translateY(-4px); box-shadow: 0 13px 27px rgba(49,83,58,.12); }

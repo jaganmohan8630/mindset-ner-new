@@ -22,12 +22,13 @@ import FamilyFamiliarityTraining from "./components/FamilyFamiliarityTraining";
 import ElderConnect from "./components/ElderConnect";
 import ElderMessages from "./components/ElderMessages";
 import Login from "./components/Login";
+import DashboardLanguageSelector from "./components/DashboardLanguageSelector";
 import "./App.css";
 import CaregiverRequests from "./components/CaregiverRequests";
 import HealthcareWorkerRequests from "./components/HealthcareWorkerRequests";
 import PatientSafetyMonitor from "./components/PatientSafetyMonitor";
 import { sendWanderingNotification } from "./emergencyNotifications";
-import { getRegionalModeText } from "./culturalContent/nerContent";
+import { getUIText } from "./uiTranslations";
 
 function App() {
   const recognitionRef = useRef(null);
@@ -167,7 +168,7 @@ function App() {
   };
 
   const t = translations[language] || translations["en-IN"];
-  const elderConnectTitle = ({ "en-IN": "Elder Connect", "hi-IN": "वरिष्ठ संपर्क", "te-IN": "వృద్ధుల అనుసంధానం", "as-IN": "জ্যেষ্ঠ সংযোগ", "bn-IN": "প্রবীণ সংযোগ", "nag-IN": "Elder Connect" })[language] || "Elder Connect";
+  const uiT = (key) => getUIText(language, key);
   const patientHomeText = {
     "en-IN": {
       patientCode: "YOUR PATIENT CODE",
@@ -317,16 +318,6 @@ function App() {
     language === "te-IN"
       ? teluguPatientHomeText
       : patientHomeText[language] || patientHomeText["en-IN"];
-  const regionalText = getRegionalModeText(language);
-  const familyFamiliarityHomeTitle = {
-    "en-IN": ["Family", "Familiarity"],
-    "hi-IN": ["पारिवारिक", "परिचय"],
-    "te-IN": ["కుటుంబ", "పరిచయం"],
-    "as-IN": ["পৰিয়ালৰ", "চিনাকি"],
-    "bn-IN": ["পারিবারিক", "পরিচিতি"],
-    "nag-IN": ["Family", "Chinaki"],
-  }[language] || ["Family", "Familiarity"];
-
   const speak = (message) => {
     const speakNow = async () => {
       const speechLanguage = language === "nag-IN" ? "en-IN" : language;
@@ -955,7 +946,7 @@ function App() {
       // a notification every 15 seconds.
       if (now - lastNotificationAt < 5 * 60 * 1000) return;
       emergencyNotificationTimesRef.current.set(alert._id, now);
-      sendWanderingNotification({ patientName: "Your patient", alert }).catch(
+      sendWanderingNotification({ patientName: getUIText(language, "yourPatient"), alert, language }).catch(
         (error) => console.warn("Emergency notification could not be shown:", error),
       );
     };
@@ -966,7 +957,7 @@ function App() {
       socket.off("wandering:alertCreated", handleWanderingAlert);
       socket.off("wandering:alertUpdated", handleWanderingAlert);
     };
-  }, [user?.role]);
+  }, [user?.role, language]);
   useEffect(() => {
     const loadPatientCode = async () => {
       if (user?.role !== "patient" || user?.patientCode || !user?.patientId) {
@@ -1038,36 +1029,36 @@ function App() {
     isPatient ? (
       <>
         {view}
-        <PatientSafetyMonitor patientId={user?.patientId} />
-        <PatientReminders />
+        <PatientSafetyMonitor patientId={user?.patientId} language={language} />
+        <PatientReminders language={language} />
         {!showElderConnect && <div className="elder-connect-listener"><ElderConnect language={language} /></div>}
-        <CaregiverRequests />
-        <HealthcareWorkerRequests />
+        <CaregiverRequests language={language} />
+        <HealthcareWorkerRequests language={language} />
       </>
     ) : (
       view
     );
 
   if (!user) {
-    return <Login onLogin={handleLogin} />;
+    return <Login onLogin={handleLogin} language={language} />;
   }
   if (showAdminLink && isAdmin) {
-    return <AdminPatientLink onBack={() => setShowAdminLink(false)} />;
+    return <AdminPatientLink onBack={() => setShowAdminLink(false)} language={language} />;
   }
   if (showDashboard && isCaregiver) {
-    return <CaregiverDashboard onBack={() => setShowDashboard(false)} />;
+    return <CaregiverDashboard onBack={() => setShowDashboard(false)} language={language} />;
   }
   if (showConnectPatient && isCaregiver) {
     return (
-      <CaregiverConnectPatient onBack={() => setShowConnectPatient(false)} />
+      <CaregiverConnectPatient language={language} onBack={() => setShowConnectPatient(false)} />
     );
   }
   if (showReminders && isCaregiver) {
-    return <ReminderManager onBack={() => setShowReminders(false)} />;
+    return <ReminderManager onBack={() => setShowReminders(false)} language={language} />;
   }
   if (showPatientReminders && isPatient) {
     return withPatientOverlays(
-      <PatientReminderList onBack={() => setShowPatientReminders(false)} />
+      <PatientReminderList onBack={() => setShowPatientReminders(false)} language={language} />
     );
   }
   if (showElderConnect && isPatient) {
@@ -1077,15 +1068,15 @@ function App() {
   }
   if (showElderMessages && isPatient) {
     return withPatientOverlays(
-      <ElderMessages onBack={() => setShowElderMessages(false)} />,
+      <ElderMessages onBack={() => setShowElderMessages(false)} language={language} />,
     );
   }
   if (showHealthcareDashboard && isHealthcareWorker) {
-    return <HealthcareWorkerDashboard onBack={() => setShowHealthcareDashboard(false)} />;
+    return <HealthcareWorkerDashboard onBack={() => setShowHealthcareDashboard(false)} language={language} />;
   }
   if (showProfile && isPatient) {
     return withPatientOverlays(
-      <PatientProfile onBack={() => setShowProfile(false)} />,
+      <PatientProfile onBack={() => setShowProfile(false)} language={language} />,
     );
   }
 
@@ -1138,24 +1129,26 @@ function App() {
 
           {isHealthcareWorker ? (
             <div className="healthcare-worker-home-content">
-              <h1>Healthcare Worker Portal</h1>
-              <p className="welcome-text">Review progress for patients explicitly assigned to your care. Patient data is read-only.</p>
+              <h1>{uiT("healthcareWorkerPortal")}</h1>
+              <p className="welcome-text">{uiT("healthcareWorkerHomeDescription")}</p>
               <div className="healthcare-worker-action-grid">
                 <button className="healthcare-worker-action-card" onClick={() => setShowHealthcareDashboard(true)}>
-                  <span className="caregiver-action-icon" aria-hidden="true">◴</span><strong>Open Healthcare Dashboard</strong><i></i><p>View authorized patient activity, trends, sessions, and permitted mood history.</p><b aria-hidden="true">›</b>
+                  <span className="caregiver-action-icon" aria-hidden="true">◴</span><strong>{uiT("openHealthcareDashboard")}</strong><i></i><p>{uiT("healthcareDashboardDescription")}</p><b aria-hidden="true">›</b>
                 </button>
               </div>
-              <button className="caregiver-logout-card" onClick={handleLogout}><span aria-hidden="true">⇥</span><p><strong>Log Out</strong><small>Sign out from your healthcare worker account.</small></p><b aria-hidden="true">›</b></button>
+              <button className="caregiver-logout-card" onClick={handleLogout}><span aria-hidden="true">⇥</span><p><strong>{uiT("logout")}</strong><small>{uiT("signOutHealthcareAccount")}</small></p><b aria-hidden="true">›</b></button>
             </div>
-          ) : isCaregiver ? (() => {
-            const language = "en-IN";
-            return (
+          ) : isCaregiver ? (
             <div className="caregiver-home-content">
-              <h1>Caregiver Dashboard</h1>
+              <h1>{uiT("dashboard")}</h1>
 
               <p className="welcome-text">
-                Monitor patient activities, cognitive performance, progress, alerts, and recommendations.
+                {uiT("caregiverHomeDescription")}
               </p>
+
+              <div className="caregiver-language-control">
+                <DashboardLanguageSelector language={language} onChange={changeLanguage} />
+              </div>
 
               <div className="caregiver-home-divider">
                 <i></i>
@@ -1170,9 +1163,9 @@ function App() {
                   <span className="caregiver-action-icon" aria-hidden="true">
                     ◴
                   </span>
-                  <strong>Open Caregiver Dashboard</strong>
+                  <strong>{uiT("openCaregiverDashboard")}</strong>
                   <i></i>
-                  <p>View patient insights, performance trends and daily summaries.</p>
+                  <p>{uiT("caregiverDashboardDescription")}</p>
                   <b aria-hidden="true">›</b>
                 </button>
                 <button
@@ -1182,9 +1175,9 @@ function App() {
                   <span className="caregiver-action-icon" aria-hidden="true">
                     ♧
                   </span>
-                  <strong>{language === "hi-IN" ? "रोगी से जुड़ें" : language === "te-IN" ? "రోగిని కలపండి" : language === "as-IN" ? "ৰোগীৰ সৈতে সংযোগ কৰক" : language === "bn-IN" ? "রোগীর সাথে সংযোগ করুন" : language === "nag-IN" ? "Patient logot connect koribo" : "Connect Patient"}</strong>
+                  <strong>{uiT("connectPatientHome")}</strong>
                   <i></i>
-                  <p>Enter patient code and send connection request.</p>
+                  <p>{uiT("connectPatientHomeDescription")}</p>
                   <b aria-hidden="true">›</b>
                 </button>
                 <button
@@ -1194,17 +1187,17 @@ function App() {
                   <span className="caregiver-action-icon" aria-hidden="true">
                     ♟
                   </span>
-                  <strong>{language === "hi-IN" ? "रोगी रिमाइंडर प्रबंधित करें" : language === "te-IN" ? "రోగి రిమైండర్‌లను నిర్వహించండి" : language === "as-IN" ? "ৰোগীৰ সোঁৱৰণী পৰিচালনা কৰক" : language === "bn-IN" ? "রোগীর রিমাইন্ডার পরিচালনা করুন" : language === "nag-IN" ? "Patient reminders manage koribo" : "Manage Patient Reminders"}</strong>
+                  <strong>{uiT("managePatientRemindersHome")}</strong>
                   <i></i>
-                  <p>Create, edit and manage reminders for your patient.</p>
+                  <p>{uiT("managePatientRemindersHomeDescription")}</p>
                   <b aria-hidden="true">›</b>
                 </button>
               </div>
               <button className="caregiver-logout-card" onClick={handleLogout}>
                 <span aria-hidden="true">⇥</span>
                 <p>
-                  <strong>{language === "hi-IN" ? "लॉग आउट" : language === "te-IN" ? "లాగ్ అవుట్" : language === "as-IN" ? "লগ আউট" : language === "bn-IN" ? "লগ আউট" : language === "nag-IN" ? "Log Out" : "Log Out"}</strong>
-                  <small>Sign out from your caregiver account.</small>
+                  <strong>{uiT("logout")}</strong>
+                  <small>{uiT("signOutCaregiverAccount")}</small>
                 </p>
                 <b aria-hidden="true">›</b>
               </button>
@@ -1213,41 +1206,40 @@ function App() {
                   className="caregiver-admin-link"
                   onClick={() => setShowAdminLink(true)}
                 >
-                  Manage Caregiver & Patient
+                  {uiT("manageCaregiverAndPatient")}
                 </button>
               )}
             </div>
-            );
-          })() : (
+          ) : (
             <>
-              <h1>{t.title}</h1>
+              <h1>{uiT("appHomeTitle")}</h1>
 
-              <p className="welcome-text">{t.description}</p>
+              <p className="welcome-text">{uiT("appHomeDescription")}</p>
 
               <div className="patient-greeting" role="status">
                 <span aria-hidden="true">👋</span>
                 <div>
-                  <strong>Hi, {user?.name || "there"}!</strong>
-                  <small>Welcome back. Let’s make today a good day.</small>
+                  <strong>{uiT("patientGreeting").replace("{name}", user?.name || uiT("greetingFallbackName"))}</strong>
+                  <small>{uiT("welcomeBackGoodDay")}</small>
                 </div>
               </div>
 
               {/* PATIENT CODE */}
               <div className="patient-code-card">
-                <p className="patient-code-label">{home.patientCode}</p>
+                <p className="patient-code-label">{uiT("patientCodeLabel")}</p>
 
                 <span className="patient-code-value">
-                  {user?.patientCode || "Patient Code unavailable"}
+                  {user?.patientCode || uiT("patientCodeUnavailable")}
                 </span>
 
-                <p className="patient-code-help">{home.patientCodeHelp}</p>
+                <p className="patient-code-help">{uiT("patientCodeHelp")}</p>
               </div>
 
               {/* LANGUAGE + VOICE */}
               <div className="patient-support-row">
                 <div className="language-selector patient-language">
                   <label htmlFor="language">
-                    🌐 <span>{home.language}</span>
+                    🌐 <span>{uiT("language")}</span>
                   </label>
 
                   <select
@@ -1266,7 +1258,7 @@ function App() {
 
                 <label className="regional-mode-toggle">
                   <input type="checkbox" checked={regionalMode} onChange={(event) => { setRegionalMode(event.target.checked); localStorage.setItem("mindset_ner_regional_mode", String(event.target.checked)); }} />
-                  <span><strong>🌿 {regionalText.label}</strong><small>{regionalText.help}</small></span>
+                  <span><strong>🌿 {getUIText(language, "regionalMode")}</strong><small>{getUIText(language, "regionalModeHelp")}</small></span>
                 </label>
 
                 <button
@@ -1282,7 +1274,7 @@ function App() {
 
               {/* COGNITIVE ACTIVITIES */}
               <DailyCarePlan language={language} />
-              <div className="patient-section-title">{home.cognitive}</div>
+              <div className="patient-section-title">{uiT("cognitiveActivities")}</div>
 
               <div className="patient-activity-grid">
                 <button
@@ -1290,8 +1282,8 @@ function App() {
                   onClick={() => setShowGame(true)}
                 >
                   <div className="activity-image">🧠</div>
-                  <strong>{home.memory}</strong>
-                  <span>{home.activity}</span>
+                  <strong>{uiT("memoryActivityShort")}</strong>
+                  <span>{uiT("activityShort")}</span>
                 </button>
 
                 <button
@@ -1299,8 +1291,8 @@ function App() {
                   onClick={() => setShowAttentionGame(true)}
                 >
                   <div className="activity-image">🎯</div>
-                  <strong>{home.attention}</strong>
-                  <span>{home.activity}</span>
+                  <strong>{uiT("attentionActivityShort")}</strong>
+                  <span>{uiT("activityShort")}</span>
                 </button>
 
                 <button
@@ -1308,8 +1300,8 @@ function App() {
                   onClick={() => setShowRoutineRecall(true)}
                 >
                   <div className="activity-image">📋</div>
-                  <strong>{home.routine}</strong>
-                  <span>{home.recall}</span>
+                  <strong>{uiT("dailyRoutineShort")}</strong>
+                  <span>{uiT("recallShort")}</span>
                 </button>
 
                 <button
@@ -1317,8 +1309,8 @@ function App() {
                   onClick={() => setShowPatternGame(true)}
                 >
                   <div className="activity-image">🔷</div>
-                  <strong>{home.pattern}</strong>
-                  <span>{home.recognition}</span>
+                  <strong>{uiT("patternShort")}</strong>
+                  <span>{uiT("recognitionShort")}</span>
                 </button>
 
                 <button
@@ -1326,21 +1318,21 @@ function App() {
                   onClick={() => setShowObjectRecognition(true)}
                 >
                   <div className="activity-image">🔍</div>
-                  <strong>{home.object}</strong>
-                  <span>{home.recognition}</span>
+                  <strong>{uiT("objectShort")}</strong>
+                  <span>{uiT("recognitionShort")}</span>
                 </button>
                 <button
                   className="patient-activity-card familiarity-card"
                   onClick={() => setShowFamilyFamiliarity(true)}
                 >
                   <div className="activity-image">👨‍👩‍👧</div>
-                  <strong>{familyFamiliarityHomeTitle[0]}</strong>
-                  <span>{familyFamiliarityHomeTitle[1]}</span>
+                  <strong>{uiT("appFamily")}</strong>
+                  <span>{uiT("appFamiliarity")}</span>
                 </button>
               </div>
 
               {/* WELL-BEING */}
-              <div className="patient-section-title">{home.wellbeing}</div>
+              <div className="patient-section-title">{uiT("wellbeingDailySupport")}</div>
 
               <div className="patient-wellbeing-grid">
                 <button
@@ -1349,7 +1341,7 @@ function App() {
                 >
                   <span className="support-big-icon">❤️</span>
 
-                  <span className="support-card-text">{home.mood}</span>
+                  <span className="support-card-text">{uiT("moodCheckIn")}</span>
                 </button>
 
                 <button
@@ -1358,45 +1350,45 @@ function App() {
                 >
                   <span className="support-big-icon">🔔</span>
 
-                  <span className="support-card-text">{home.reminders}</span>
+                  <span className="support-card-text">{uiT("reminders")}</span>
                 </button>
                 <button
                   className="patient-support-card elder-connect-card"
                   onClick={() => setShowElderConnect(true)}
                 >
                   <span className="support-big-icon">🤝</span>
-                  <span className="support-card-text">{elderConnectTitle}</span>
+                  <span className="support-card-text">{uiT("appElderConnect")}</span>
                 </button>
                 <button
                   className="patient-support-card message-card"
                   onClick={() => setShowElderMessages(true)}
                 >
                   <span className="support-big-icon">💬</span>
-                  <span className="support-card-text">Messages</span>
+                  <span className="support-card-text">{uiT("messages")}</span>
                 </button>
                 <button
                   className="patient-support-card profile-card"
                   onClick={() => setShowProfile(true)}
                 >
                   <span className="support-big-icon">👤</span>
-                  <span className="support-card-text">My Profile</span>
+                  <span className="support-card-text">{uiT("profile")}</span>
                 </button>
               </div>
 
               {/* LOGOUT */}
               <button className="patient-logout-button" onClick={handleLogout}>
-                🚪 &nbsp; {home.logout}
+                🚪 &nbsp; {uiT("logout")}
               </button>
 
-              <p className="support-text">{home.footer}</p>
+              <p className="support-text">{uiT("simple")} • {uiT("friendly")} • {uiT("designedForYou")}</p>
             </>
           )}
         </main>
       </div>
       {isCaregiver && (
         <p className="caregiver-page-footer">
-          <span aria-hidden="true">♥</span> Simple <b>·</b> Friendly <b>·</b>{" "}
-          Designed for you
+          <span aria-hidden="true">♥</span> {uiT("simple")} <b>·</b> {uiT("friendly")} <b>·</b>{" "}
+          {uiT("designedForYou")}
         </p>
       )}
     </>

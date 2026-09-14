@@ -1,5 +1,6 @@
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
+import { getUIText } from "./uiTranslations";
 
 const STORAGE_KEY = "mindset_ner_scheduled_notification_ids";
 
@@ -54,7 +55,7 @@ const getSchedule = (reminder) => {
   return { at, allowWhileIdle: true };
 };
 
-export const syncReminderNotifications = async (reminders) => {
+export const syncReminderNotifications = async (reminders, language) => {
   if (!Capacitor.isNativePlatform()) return;
 
   const permission = await LocalNotifications.checkPermissions();
@@ -77,8 +78,8 @@ export const syncReminderNotifications = async (reminders) => {
     nextIds[reminder._id] = id;
     notifications.push({
       id,
-      title: `Reminder: ${reminder.title}`,
-      body: reminder.description || "It is time for your scheduled activity.",
+      title: getUIText(language, "reminderNotificationTitle", { title: reminder.title }),
+      body: reminder.description || getUIText(language, "reminderNotificationBody"),
       largeBody: reminder.description || reminder.title,
       schedule,
       autoCancel: true,

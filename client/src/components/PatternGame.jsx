@@ -1,14 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { API_URL } from "../api";
 import { NER_PATTERN_SYMBOLS } from "../culturalContent/nerContent";
+import { getUIText } from "../uiTranslations";
 
 function PatternGame({ onBack, language = "en-IN", regionalMode = false }) {
-  const isHindi = language === "hi-IN";
-  const isTelugu = language === "te-IN";
-  const isAssamese = language === "as-IN";
-  const isBengali = language === "bn-IN";
-  const isNagamese = language === "nag-IN";
-  const patternText = isTelugu ? { eyebrow: "నమూనా గుర్తింపు", preparing: "మీ కార్యకలాపం సిద్ధమవుతోంది...", title: "తప్పిపోయిన నమూనాను కనుగొనండి", description: "క్రమాన్ని జాగ్రత్తగా చూసి, తదుపరి ఏమి వస్తుందో ఎంచుకోండి.", question: "ప్రశ్న", correct: "సరైన సమాధానాలు", level: "కార్యకలాప స్థాయి", tip: "ఏది పునరావృతమవుతుందో చూడండి, నమూనాను పూర్తి చేసే చిహ్నాన్ని ఎంచుకోండి.", prompt: "తర్వాత ఏమి వస్తుంది?", back: "వెనుకకు", wellDone: "చాలా బాగా చేశారు!", completion: "మీరు నమూనా గుర్తింపు కార్యకలాపాన్ని పూర్తి చేశారు.", complete: "కార్యకలాపం పూర్తయింది", score: "స్కోర్", accuracy: "ఖచ్చితత్వం", difficulty: "కష్టతర స్థాయి", home: "హోమ్‌కు తిరిగి వెళ్లండి" } : isAssamese ? { eyebrow: "আৰ্হি চিনাক্তকৰণ", preparing: "আপোনাৰ কাৰ্যকলাপ প্ৰস্তুত হৈ আছে...", title: "হেৰাই যোৱা আৰ্হিটো বিচাৰি উলিয়াওক", description: "ক্ৰমটো মনোযোগেৰে চাওক আৰু তাৰ পিছত কি আহিব বাছক।", question: "প্ৰশ্ন", correct: "সঠিক উত্তৰ", level: "কাৰ্যকলাপৰ স্তৰ", tip: "কি পুনৰাবৃত্তি হৈছে চাওক, তাৰ পিছত আৰ্হিটো সম্পূৰ্ণ কৰা চিহ্ন বাছক।", prompt: "তাৰ পিছত কি আহিব?", back: "পিছলৈ", wellDone: "খুব ভাল!", completion: "আপুনি আৰ্হি চিনাক্তকৰণ কাৰ্যকলাপ সম্পূৰ্ণ কৰিলে।", complete: "কাৰ্যকলাপ সম্পূৰ্ণ", score: "স্ক’ৰ", accuracy: "সঠিকতা", difficulty: "কঠিনতাৰ স্তৰ", home: "হোমলৈ উভতি যাওক" } : isBengali ? { eyebrow: "প্যাটার্ন শনাক্তকরণ", preparing: "আপনার কার্যক্রম প্রস্তুত হচ্ছে...", title: "হারিয়ে যাওয়া প্যাটার্নটি খুঁজুন", description: "ক্রমটি মনোযোগ দিয়ে দেখুন এবং এরপর কী আসবে বেছে নিন।", question: "প্রশ্ন", correct: "সঠিক উত্তর", level: "কার্যক্রমের স্তর", tip: "কী পুনরাবৃত্তি হচ্ছে দেখুন, তারপর প্যাটার্নটি সম্পূর্ণ করা চিহ্নটি বেছে নিন।", prompt: "এর পরে কী আসবে?", back: "ফিরে যান", wellDone: "খুব ভালো!", completion: "আপনি প্যাটার্ন শনাক্তকরণ কার্যক্রম সম্পূর্ণ করেছেন।", complete: "কার্যক্রম সম্পূর্ণ", score: "স্কোর", accuracy: "সঠিকতা", difficulty: "কঠিনতার স্তর", home: "হোমে ফিরে যান" } : isNagamese ? { eyebrow: "Pattern recognition", preparing: "Apunar activity ready kori ase...", title: "Missing pattern bisaribo", description: "Sequence bhal sai aru next te ki ahibo bachibo.", question: "Question", correct: "Thik answers", level: "Activity level", tip: "Ki repeat hoi ase sai, pichete pattern complete koribole symbol bachibo.", prompt: "Pichete ki ahibo?", back: "Piche jai", wellDone: "Besi bhal!", completion: "Apuni pattern recognition activity complete korise.", complete: "Activity complete", score: "Score", accuracy: "Accuracy", difficulty: "Difficulty", home: "Home te jai" } : null;
+  const t = (key) => getUIText(language, key);
   const user = JSON.parse(localStorage.getItem("mindset_ner_user") || "null");
 
   const patientId = user?.patientId;
@@ -423,9 +419,9 @@ function PatternGame({ onBack, language = "en-IN", regionalMode = false }) {
     return (
       <div className="game-page">
         <div className="game-header">
-          <p className="eyebrow">{patternText?.eyebrow || (isHindi ? "पैटर्न पहचान" : "PATTERN RECOGNITION")}</p>
+          <p className="eyebrow">{t("patternGameEyebrow")}</p>
 
-          <h1>{patternText?.preparing || (isHindi ? "आपकी गतिविधि तैयार की जा रही है..." : "Preparing your activity...")}</h1>
+          <h1>{t("preparingActivity")}</h1>
         </div>
       </div>
     );
@@ -440,41 +436,41 @@ function PatternGame({ onBack, language = "en-IN", regionalMode = false }) {
     return (
       <div className="game-page">
         <button className="back-button" onClick={onBack}>
-          ← {patternText?.back || "Back"}
+          ← {t("back")}
         </button>
 
         <div className="game-header">
-          <p className="eyebrow">{patternText?.eyebrow || "PATTERN RECOGNITION"}</p>
+          <p className="eyebrow">{t("patternGameEyebrow")}</p>
 
-          <h1>{patternText?.wellDone || "Well done!"}</h1>
+          <h1>{t("wellDone")}</h1>
 
-          <p>{patternText?.completion || "You completed the pattern recognition activity."}</p>
+          <p>{t("patternActivityCompletion")}</p>
         </div>
 
         <div className="game-complete">
-          <h2>{patternText?.complete || "Activity Complete"}</h2>
+          <h2>{t("activityComplete")}</h2>
 
           <p>
-            {patternText?.score || "Score"}: <strong>{score}</strong>
+            {t("score")}: <strong>{score}</strong>
           </p>
 
           <p>
-            {patternText?.correct || "Correct answers"}:{" "}
+            {t("correctAnswers")}:{" "}
             <strong>
               {correctAnswers} / {questions.length}
             </strong>
           </p>
 
           <p>
-            {patternText?.accuracy || "Accuracy"}: <strong>{accuracy}%</strong>
+            {t("accuracy")}: <strong>{accuracy}%</strong>
           </p>
 
           <p>
-            {patternText?.difficulty || "Difficulty"}: <strong>{patternText?.level || "Level"} {difficulty}</strong>
+            {t("difficulty")}: <strong>{t("level")} {difficulty}</strong>
           </p>
 
           <button className="start-button" onClick={onBack}>
-            {patternText?.home || "Back to Home"}
+            {t("backToHome")}
           </button>
         </div>
       </div>
@@ -490,34 +486,34 @@ function PatternGame({ onBack, language = "en-IN", regionalMode = false }) {
   return (
     <div className="game-page pattern-game-page">
       <button className="back-button" onClick={onBack}>
-        ← Back
+        ← {t("back")}
       </button>
 
       <div className="game-header pattern-game-header">
-        <p className="eyebrow">{patternText?.eyebrow || (isHindi ? "पैटर्न पहचान" : "PATTERN RECOGNITION")}</p>
+        <p className="eyebrow">{t("patternGameEyebrow")}</p>
 
-        <h1>{patternText?.title || (isHindi ? "गायब पैटर्न खोजें" : "Find the missing pattern")}</h1>
+        <h1>{t("patternGameTitle")}</h1>
 
-        <p>{patternText?.description || (isHindi ? "क्रम को ध्यान से देखें और अगला चिन्ह चुनें।" : "Look carefully at the sequence and choose what comes next.")}</p>
+        <p>{t("patternGameDescription")}</p>
 
         <p>
-          {patternText?.question || (isHindi ? "प्रश्न" : "Question")} {currentQuestion + 1} {(isHindi || isTelugu || isAssamese || isBengali) ? "/" : "of"} {questions.length}
+          {t("patternQuestionProgress").replace("{current}", String(currentQuestion + 1)).replace("{total}", String(questions.length))}
         </p>
-        <div className="pattern-game-status" aria-label="Activity progress">
+        <div className="pattern-game-status" aria-label={t("activityProgress")}>
           <div>
-            <span>Question</span>
-            <strong>{currentQuestion + 1} of {questions.length}</strong>
+            <span>{t("question")}</span>
+            <strong>{t("patternQuestionProgress").replace("{current}", String(currentQuestion + 1)).replace("{total}", String(questions.length))}</strong>
           </div>
           <div>
-            <span>{patternText?.correct || (isHindi ? "सही उत्तर" : "Correct answers")}</span>
+            <span>{t("correctAnswers")}</span>
             <strong>{correctAnswers}</strong>
           </div>
           <div>
-            <span>{patternText?.level || (isHindi ? "गतिविधि स्तर" : "Activity level")}</span>
+            <span>{t("activityLevel")}</span>
             <strong>{difficulty}</strong>
           </div>
         </div>
-        <p className="pattern-game-tip">{patternText?.tip || (isHindi ? "जो दोहराया जा रहा है उसे देखें, फिर पैटर्न पूरा करने वाला चिन्ह चुनें।" : "Look for what repeats, then choose the symbol that completes the pattern.")}</p>
+        <p className="pattern-game-tip">{t("patternGameTip")}</p>
       </div>
 
       <div className="routine-question-card pattern-question-card">
@@ -529,7 +525,7 @@ function PatternGame({ onBack, language = "en-IN", regionalMode = false }) {
           ))}
         </div>
 
-        <h2>{patternText?.prompt || (isHindi ? "इसके बाद क्या आएगा?" : "What comes next?")}</h2>
+        <h2>{t("whatComesNext")}</h2>
 
         <div className="routine-options">
           {question.options.map((option, index) => {
@@ -549,7 +545,7 @@ function PatternGame({ onBack, language = "en-IN", regionalMode = false }) {
                 className={className}
                 onClick={() => handleAnswer(index)}
                 disabled={answered}
-                aria-label={`Answer: ${option}`}
+                aria-label={t("answerOption").replace("{option}", option)}
               >
                 {option}
               </button>

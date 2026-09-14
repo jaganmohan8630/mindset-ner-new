@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CapacitorHttp } from "@capacitor/core";
 import loginLandscape from "../assets/login-landscape.png";
 import { API_URL } from "../api";
+import { getUIText } from "../uiTranslations";
 const Icon = ({ name, size = 22 }) => {
   const paths = {
     user: (
@@ -73,7 +74,8 @@ const Field = ({ label, icon, children }) => (
   </label>
 );
 
-function Login({ onLogin }) {
+function Login({ onLogin, language: selectedLanguage = "en-IN" }) {
+  const t = (key) => getUIText(selectedLanguage, key);
   const [isRegistering, setIsRegistering] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -105,7 +107,7 @@ function Login({ onLogin }) {
   const handleLogin = async (event) => {
     event.preventDefault();
     if (!email || !password)
-      return setError("Please enter your email and password.");
+      return setError(t("pleaseEnterEmailPassword"));
     try {
       setLoading(true);
       setError("");
@@ -125,7 +127,7 @@ function Login({ onLogin }) {
       const data = response.data;
 
       if (response.status < 200 || response.status >= 300) {
-        throw new Error(data?.message || "Login failed.");
+        throw new Error(data?.message || t("loginFailed"));
       }
       localStorage.setItem("mindset_ner_token", data.token);
       localStorage.setItem("mindset_ner_user", JSON.stringify(data.user));
@@ -142,11 +144,11 @@ function Login({ onLogin }) {
     setError("");
     setMessage("");
     if (!name || !email || !password)
-      return setError("Please fill in all required fields.");
+      return setError(t("fillRequiredFields"));
     if (password.length < 6)
-      return setError("Password must be at least 6 characters.");
+      return setError(t("passwordMinimumLength"));
     if (role === "patient" && (!age || !gender))
-      return setError("Please enter the patient's age and gender.");
+      return setError(t("enterPatientAgeGender"));
     try {
       setLoading(true);
       let patientId = null;
@@ -158,7 +160,7 @@ function Login({ onLogin }) {
         });
         const d = await r.json();
         if (!r.ok)
-          throw new Error(d.message || "Failed to create patient profile.");
+          throw new Error(d.message || t("failedCreatePatientProfile"));
         patientId = d.patient._id;
       }
       const r = await fetch(`${API_URL}/api/auth/register`, {
@@ -167,10 +169,10 @@ function Login({ onLogin }) {
         body: JSON.stringify({ name, email, password, role, patientId }),
       });
       const d = await r.json();
-      if (!r.ok) throw new Error(d.message || "Registration failed.");
+      if (!r.ok) throw new Error(d.message || t("registrationFailed"));
       localStorage.setItem("mindset_ner_token", d.token);
       localStorage.setItem("mindset_ner_user", JSON.stringify(d.user));
-      setMessage("Account created successfully.");
+      setMessage(t("accountCreatedSuccessfully"));
       onLogin(d.user);
     } catch (err) {
       console.error("Registration error:", err);
@@ -197,7 +199,7 @@ function Login({ onLogin }) {
           style={{ backgroundImage: `url(${loginLandscape})` }}
         >
           <div className="login-story-copy">
-            <p>Welcome to</p>
+            <p>{t("welcomeTo")}</p>
             <h2>MINDSET NER</h2>
             <span className="story-divider">
               <i></i>
@@ -205,8 +207,7 @@ function Login({ onLogin }) {
               <i></i>
             </span>
             <p className="story-description">
-              Your cognitive companion designed to help you stay engaged, active
-              &amp; connected every day.
+              {t("cognitiveCompanionDescription")}
             </p>
           </div>
           <div className="story-benefits">
@@ -214,57 +215,51 @@ function Login({ onLogin }) {
               <span>
                 <Icon name="shield" />
               </span>
-              Secure
-              <br />
-              &amp; Private
+              {t("securePrivate")}
             </div>
             <div>
               <span>
                 <Icon name="users" />
               </span>
-              Caregiver
-              <br />
-              Connected
+              {t("caregiverConnected")}
             </div>
             <div>
               <span>
                 <Icon name="heart" />
               </span>
-              Designed
-              <br />
-              for You
+              {t("designedForYou")}
             </div>
           </div>
         </aside>
         <section className="login-form-pane">
           <div className="login-brand-mark">🧠</div>
           <p className="eyebrow">MINDSET NER</p>
-          <h1>{isRegistering ? "Create your account" : "Welcome back!"}</h1>
+          <h1>{isRegistering ? t("createYourAccount") : t("welcomeBack")}</h1>
           <p className="welcome-text">
             {isRegistering
-              ? "Join MINDSET NER and begin your wellness journey."
-              : "Sign in to continue to your MINDSET NER account."}
+              ? t("joinWellnessJourney")
+              : t("signInContinue")}
           </p>
           <form
             className="login-form"
             onSubmit={isRegistering ? handleRegister : handleLogin}
           >
             {isRegistering && (
-              <Field label="Full name" icon="user">
-                {input("text", "Enter your full name", name, setName)}
+              <Field label={t("fullName")} icon="user">
+                {input("text", t("enterFullName"), name, setName)}
               </Field>
             )}
-            <Field label="Email address" icon="user">
+            <Field label={t("emailAddress")} icon="user">
               <span className="input-with-icon">
-                {input("email", "Enter your email address", email, setEmail)}
+                {input("email", t("enterEmailAddress"), email, setEmail)}
                 <Icon name="mail" />
               </span>
             </Field>
-            <Field label="Password" icon="lock">
+            <Field label={t("password")} icon="lock">
               <span className="input-with-icon">
                 {input(
                   showPassword ? "text" : "password",
-                  "Enter your password",
+                  t("enterPassword"),
                   password,
                   setPassword,
                 )}
@@ -272,7 +267,7 @@ function Login({ onLogin }) {
                   className="password-toggle"
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  aria-label="Show or hide password"
+                  aria-label={t("showOrHidePassword")}
                 >
                   <Icon name="eye" />
                 </button>
@@ -280,35 +275,35 @@ function Login({ onLogin }) {
             </Field>
             {isRegistering && (
               <div className="registration-grid">
-                <Field label="Account type" icon="users">
+                <Field label={t("accountType")} icon="users">
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
                     className="login-input"
                   >
-                    <option value="patient">Patient</option>
-                    <option value="caregiver">Caregiver</option>
-                    <option value="healthcare_worker">Healthcare worker</option>
+                    <option value="patient">{t("patient")}</option>
+                    <option value="caregiver">{t("caregiver")}</option>
+                    <option value="healthcare_worker">{t("healthcareWorker")}</option>
                   </select>
                 </Field>
                 {role === "patient" && (
                   <>
-                    <Field label="Age" icon="user">
-                      {input("number", "Age", age, setAge)}
+                    <Field label={t("age")} icon="user">
+                      {input("number", t("age"), age, setAge)}
                     </Field>
-                    <Field label="Gender" icon="user">
+                    <Field label={t("gender")} icon="user">
                       <select
                         value={gender}
                         onChange={(e) => setGender(e.target.value)}
                         className="login-input"
                       >
-                        <option value="female">Female</option>
-                        <option value="male">Male</option>
-                        <option value="other">Other</option>
+                        <option value="female">{t("female")}</option>
+                        <option value="male">{t("male")}</option>
+                        <option value="other">{t("other")}</option>
                       </select>
                     </Field>
-                    <Field label="Language" icon="user">
-                      {input("text", "Language", language, setLanguage)}
+                    <Field label={t("language")} icon="user">
+                      {input("text", t("language"), language, setLanguage)}
                     </Field>
                   </>
                 )}
@@ -316,7 +311,7 @@ function Login({ onLogin }) {
             )}
             {!isRegistering && (
               <button type="button" className="forgot-password">
-                Forgot Password?
+                {t("forgotPassword")}
               </button>
             )}
             {error && <div className="auth-error">{error}</div>}
@@ -329,15 +324,15 @@ function Login({ onLogin }) {
               <Icon name="lock" />
               {loading
                 ? isRegistering
-                  ? "Creating account..."
-                  : "Signing in..."
+                  ? t("creatingAccount")
+                  : t("signingIn")
                 : isRegistering
-                  ? "Create Account"
-                  : "Sign In"}
+                  ? t("createAccount")
+                  : t("signIn")}
             </button>
           </form>
           <div className="login-or">
-            <span></span>or<span></span>
+            <span></span>{t("or")}<span></span>
           </div>
           <button
             type="button"
@@ -346,21 +341,21 @@ function Login({ onLogin }) {
           >
             <Icon name={isRegistering ? "lock" : "user"} />
             {isRegistering
-              ? "Already have an account? Sign In"
-              : "Create New Account"}
+              ? t("alreadyHaveAccountSignIn")
+              : t("createNewAccount")}
           </button>
           <div className="security-note">
             <Icon name="shield" size={34} />
             <p>
-              <strong>Your data is safe with us.</strong>
-              <span>We use advanced security to protect your information.</span>
+              <strong>{t("yourDataSafe")}</strong>
+              <span>{t("securityDescription")}</span>
             </p>
           </div>
         </section>
       </main>
       <p className="login-footer">
-        <Icon name="heart" size={21} /> Simple <b>•</b> Friendly <b>•</b>{" "}
-        Designed for you
+        <Icon name="heart" size={21} /> {t("simple")} <b>•</b> {t("friendly")} <b>•</b>{" "}
+        {t("designedForYou")}
       </p>
     </div>
   );

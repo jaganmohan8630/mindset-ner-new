@@ -5,7 +5,7 @@ import { API_URL } from "../api";
 
 // This is intentionally independent of the voice-assistant lifecycle.
 // It monitors only while this React app is open in the foreground.
-function PatientSafetyMonitor({ patientId }) {
+function PatientSafetyMonitor({ patientId, language: _language = "en-IN" }) {
   useEffect(() => {
     if (!patientId) return undefined;
 

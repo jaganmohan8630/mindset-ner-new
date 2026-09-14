@@ -1,5 +1,6 @@
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
+import { getUIText } from "./uiTranslations";
 
 const notificationIdFor = (alertId) => {
   let hash = 0;
@@ -9,12 +10,12 @@ const notificationIdFor = (alertId) => {
 
 const EMERGENCY_CHANNEL_ID = "wandering-emergency-alerts";
 
-const ensureEmergencyChannel = async () => {
+const ensureEmergencyChannel = async (language) => {
   if (!Capacitor.isNativePlatform()) return;
   await LocalNotifications.createChannel({
     id: EMERGENCY_CHANNEL_ID,
-    name: "Wandering and emergency alerts",
-    description: "Urgent notifications when a patient leaves the configured safe zone.",
+    name: getUIText(language, "emergencyNotificationChannelName"),
+    description: getUIText(language, "emergencyNotificationChannelDescription"),
     importance: 5,
     visibility: 1,
     sound: "default",
@@ -39,13 +40,15 @@ export const hasEmergencyNotificationPermission = async () => {
   return "Notification" in window && Notification.permission === "granted";
 };
 
-export const sendWanderingNotification = async ({ patientName, alert }) => {
-  const distance = alert.distanceFromSafeZoneMeters >= 1000 ? `${(alert.distanceFromSafeZoneMeters / 1000).toFixed(1)} km` : `${Math.round(alert.distanceFromSafeZoneMeters)} m`;
-  const title = "Emergency: patient outside safe zone";
-  const body = `${patientName || "Patient"} is ${distance} outside the safe zone.`;
+export const sendWanderingNotification = async ({ patientName, alert, language }) => {
+  const distance = alert.distanceFromSafeZoneMeters >= 1000
+    ? getUIText(language, "emergencyNotificationDistanceKilometers", { distance: (alert.distanceFromSafeZoneMeters / 1000).toFixed(1) })
+    : getUIText(language, "emergencyNotificationDistanceMeters", { distance: Math.round(alert.distanceFromSafeZoneMeters) });
+  const title = getUIText(language, "emergencyNotificationTitle");
+  const body = getUIText(language, "emergencyNotificationBody", { patientName: patientName || getUIText(language, "patient"), distance });
   if (Capacitor.isNativePlatform()) {
     if (!(await requestEmergencyNotificationPermission())) return false;
-    await ensureEmergencyChannel();
+    await ensureEmergencyChannel(language);
     await LocalNotifications.schedule({ notifications: [{ id: notificationIdFor(alert._id), title, body, channelId: EMERGENCY_CHANNEL_ID, schedule: { at: new Date(Date.now() + 1500), allowWhileIdle: true }, extra: { wanderingAlertId: alert._id, patientId: alert.patientId } }] });
     return true;
   }
@@ -56,11 +59,11 @@ export const sendWanderingNotification = async ({ patientName, alert }) => {
   return false;
 };
 
-export const sendEmergencyTestNotification = async () => {
+export const sendEmergencyTestNotification = async (language) => {
   const testAlert = {
     _id: `wandering-notification-test-${Date.now()}`,
     patientId: "test",
     distanceFromSafeZoneMeters: 100,
   };
-  return sendWanderingNotification({ patientName: "Test patient", alert: testAlert });
+  return sendWanderingNotification({ patientName: getUIText(language, "emergencyTestPatient"), alert: testAlert, language });
 };

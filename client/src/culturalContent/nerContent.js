@@ -18,17 +18,6 @@ export const NER_OBJECTS = [
   { level: 5, emoji: "🥭", name: "Mango", options: ["Mango", "Banana", "Orange", "Apple"], answer: 0 },
 ];
 
-export const REGIONAL_MODE_TEXT = {
-  "en-IN": { label: "Regional Mode", help: "North-Eastern familiar visuals" },
-  "hi-IN": { label: "क्षेत्रीय मोड", help: "उत्तर-पूर्व के परिचित दृश्य" },
-  "te-IN": { label: "ప్రాంతీయ మోడ్", help: "ఈశాన్య ప్రాంతానికి పరిచితమైన దృశ్యాలు" },
-  "as-IN": { label: "আঞ্চলিক মোড", help: "উত্তৰ-পূবৰ চিনাকি দৃশ্য" },
-  "bn-IN": { label: "আঞ্চলিক মোড", help: "উত্তর-পূর্বের পরিচিত দৃশ্য" },
-  "nag-IN": { label: "Regional Mode", help: "North-East chinaki visuals" },
-};
-
-export const getRegionalModeText = (language) => REGIONAL_MODE_TEXT[language] || REGIONAL_MODE_TEXT["en-IN"];
-
 export const NER_ROUTINE_QUESTIONS = [
   { question: "After morning tea, what can be part of a familiar daily routine?", options: ["Continue with morning tasks", "Go to bed for the night", "Have dinner", "Skip the whole day"], answer: 0 },
   { question: "When returning from a nearby market or garden, what is helpful to remember?", options: ["Keep belongings in their usual place", "Leave everything outside", "Skip water all day", "Go back to sleep"], answer: 0 },

@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { API_URL } from "../api";
+import { getUIText } from "../uiTranslations";
 
-function AdminPatientLink({ onBack }) {
+function AdminPatientLink({ onBack, language = "en-IN" }) {
+  const t = (key) => getUIText(language, key);
   const [caregivers, setCaregivers] = useState([]);
   const [patients, setPatients] = useState([]);
 
@@ -39,13 +41,13 @@ function AdminPatientLink({ onBack }) {
 
       if (!caregiverResponse.ok) {
         throw new Error(
-          caregiverData.message || "Failed to load caregivers",
+          caregiverData.message || t("failedToLoadCaregivers"),
         );
       }
 
       if (!patientResponse.ok) {
         throw new Error(
-          patientData.message || "Failed to load patients",
+          patientData.message || t("failedToLoadPatients"),
         );
       }
 
@@ -70,7 +72,7 @@ function AdminPatientLink({ onBack }) {
     setError("");
 
     if (!caregiverId || !patientId) {
-      setError("Please select both a caregiver and a patient.");
+      setError(t("selectCaregiverAndPatient"));
       return;
     }
 
@@ -96,11 +98,11 @@ function AdminPatientLink({ onBack }) {
 
       if (!response.ok) {
         throw new Error(
-          data.message || "Failed to link patient",
+          data.message || t("failedToLinkPatient"),
         );
       }
 
-      setMessage("Patient linked to caregiver successfully.");
+      setMessage(t("patientLinkedSuccessfully"));
 
       setCaregivers((current) =>
         current.map((caregiver) =>
@@ -121,7 +123,7 @@ function AdminPatientLink({ onBack }) {
     return (
       <div className="dashboard-page">
         <div className="welcome-card">
-          <h1>Loading management panel...</h1>
+          <h1>{t("loadingManagementPanel")}</h1>
         </div>
       </div>
     );
@@ -130,12 +132,12 @@ function AdminPatientLink({ onBack }) {
   return (
     <div className="dashboard-page">
       <div className="welcome-card">
-        <p className="eyebrow">ADMIN MANAGEMENT</p>
+        <p className="eyebrow">{t("adminManagement")}</p>
 
-        <h1>Caregiver & Patient Linking</h1>
+        <h1>{t("caregiverPatientLinking")}</h1>
 
         <p className="welcome-text">
-          Assign a patient to the caregiver responsible for their care.
+          {t("assignPatientToCaregiver")}
         </p>
 
         {error && (
@@ -153,7 +155,7 @@ function AdminPatientLink({ onBack }) {
         <form onSubmit={linkPatient}>
           <div className="form-group">
             <label htmlFor="caregiver">
-              Select Caregiver
+              {t("selectCaregiver")}
             </label>
 
             <select
@@ -164,7 +166,7 @@ function AdminPatientLink({ onBack }) {
               }
             >
               <option value="">
-                Choose caregiver
+                {t("chooseCaregiver")}
               </option>
 
               {caregivers.map((caregiver) => (
@@ -180,7 +182,7 @@ function AdminPatientLink({ onBack }) {
 
           <div className="form-group">
             <label htmlFor="patient">
-              Select Patient
+              {t("selectPatient")}
             </label>
 
             <select
@@ -191,7 +193,7 @@ function AdminPatientLink({ onBack }) {
               }
             >
               <option value="">
-                Choose patient
+                {t("choosePatient")}
               </option>
 
               {patients.map((patient) => (
@@ -199,7 +201,7 @@ function AdminPatientLink({ onBack }) {
                   key={patient._id}
                   value={patient._id}
                 >
-                  {patient.name} — Age {patient.age}
+                  {patient.name} — {t("age")} {patient.age}
                 </option>
               ))}
             </select>
@@ -210,7 +212,7 @@ function AdminPatientLink({ onBack }) {
             className="start-button"
             disabled={saving}
           >
-            {saving ? "Linking..." : "Link Patient"}
+            {saving ? t("linking") : t("linkPatient")}
           </button>
         </form>
 
@@ -218,7 +220,7 @@ function AdminPatientLink({ onBack }) {
           className="secondary-button"
           onClick={onBack}
         >
-          Back
+          {t("back")}
         </button>
       </div>
     </div>

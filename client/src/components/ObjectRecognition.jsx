@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { API_URL } from "../api";
 import { assameseObjectLabels, bengaliObjectLabels, hindiObjectLabels, nagameseObjectLabels, teluguObjectLabels } from "../activityTranslations";
 import { NER_OBJECTS } from "../culturalContent/nerContent";
+import { getUIText } from "../uiTranslations";
 
 const OBJECTS = [
   // Level 1 - very familiar household objects
@@ -189,22 +190,7 @@ function clearOfflineGames(games) {
 }
 
 function ObjectRecognition({ onBack, language = "en-IN", regionalMode = false }) {
-  const isHindi = language === "hi-IN";
-  const isTelugu = language === "te-IN";
-  const isAssamese = language === "as-IN";
-  const isBengali = language === "bn-IN";
-  const isNagamese = language === "nag-IN";
-  const text = isHindi
-    ? { eyebrow: "वस्तु पहचान", title: "वस्तु को पहचानें", question: "प्रश्न", correct: "सही उत्तर", level: "गतिविधि स्तर", tip: "ध्यान से देखें, फिर वस्तु के सही नाम को चुनें।", prompt: "यह क्या है?", back: "वापस" }
-    : isTelugu
-      ? { eyebrow: "వస్తువు గుర్తింపు", title: "వస్తువును గుర్తించండి", question: "ప్రశ్న", correct: "సరైన సమాధానాలు", level: "కార్యకలాప స్థాయి", tip: "జాగ్రత్తగా చూసి, వస్తువుకు సరిపోయే పేరును ఎంచుకోండి.", prompt: "ఇది ఏమిటి?", back: "వెనుకకు" }
-      : isAssamese
-        ? { eyebrow: "বস্তু চিনাক্তকৰণ", title: "বস্তুটো চিনাক্ত কৰক", question: "প্ৰশ্ন", correct: "সঠিক উত্তৰ", level: "কাৰ্যকলাপৰ স্তৰ", tip: "মনোযোগেৰে চাওক, তাৰ পিছত বস্তুটোৰ সঠিক নাম বাছক।", prompt: "এইটো কি?", back: "পিছলৈ" }
-        : isBengali
-          ? { eyebrow: "বস্তু শনাক্তকরণ", title: "বস্তুটি চিনুন", question: "প্রশ্ন", correct: "সঠিক উত্তর", level: "কার্যক্রমের স্তর", tip: "মনোযোগ দিয়ে দেখুন, তারপর বস্তুটির সঠিক নাম বেছে নিন।", prompt: "এটি কী?", back: "ফিরে যান" }
-          : isNagamese
-            ? { eyebrow: "Object recognition", title: "Object chinibo", question: "Question", correct: "Thik answers", level: "Activity level", tip: "Bhal sai aru object logot mil thaka naam bachibo.", prompt: "Etu ki?", back: "Piche jai" }
-            : { eyebrow: "OBJECT RECOGNITION", title: "Recognize the object", question: "Question", correct: "Correct answers", level: "Activity level", tip: "Look carefully, then select the name that matches the object.", prompt: "What is this?", back: "Back" };
+  const t = (key) => getUIText(language, key);
   const user = JSON.parse(
     localStorage.getItem("mindset_ner_user") || "null",
   );
@@ -420,7 +406,7 @@ function ObjectRecognition({ onBack, language = "en-IN", regionalMode = false })
         });
 
         setSaveMessage(
-          "Game saved offline. It will sync when internet returns.",
+          t("gameSavedOffline"),
         );
 
         return;
@@ -449,7 +435,7 @@ function ObjectRecognition({ onBack, language = "en-IN", regionalMode = false })
       }
 
       setSaveMessage(
-        "Your progress has been saved.",
+        t("progressSaved"),
       );
     } catch (error) {
       console.error(
@@ -464,7 +450,7 @@ function ObjectRecognition({ onBack, language = "en-IN", regionalMode = false })
       });
 
       setSaveMessage(
-        "Game saved offline. It will sync when internet returns.",
+        t("gameSavedOffline"),
       );
     }
   };
@@ -535,10 +521,10 @@ function ObjectRecognition({ onBack, language = "en-IN", regionalMode = false })
       <div className="game-page">
         <div className="game-header">
           <p className="eyebrow">
-          {text.eyebrow}
+          {t("objectRecognitionActivity")}
           </p>
 
-          <h1>{isTelugu ? "మీ కార్యకలాపం సిద్ధమవుతోంది..." : "Preparing your activity..."}</h1>
+          <h1>{t("preparingActivity")}</h1>
         </div>
       </div>
     );
@@ -560,43 +546,42 @@ function ObjectRecognition({ onBack, language = "en-IN", regionalMode = false })
           className="back-button"
           onClick={onBack}
         >
-          ← Back
+          ← {t("back")}
         </button>
 
         <div className="game-header">
           <p className="eyebrow">
-            OBJECT RECOGNITION
+            {t("objectRecognitionActivity")}
           </p>
 
-          <h1>Well done!</h1>
+          <h1>{t("wellDone")}</h1>
 
           <p>
-            You completed the object recognition
-            activity.
+            {t("objectRecognitionCompletion")}
           </p>
         </div>
 
         <div className="game-complete">
-          <h2>Activity Complete</h2>
+          <h2>{t("activityComplete")}</h2>
 
           <p>
-            Score: <strong>{score}</strong>
+            {t("score")}: <strong>{score}</strong>
           </p>
 
           <p>
-            Correct answers:{" "}
+            {t("correctAnswers")}:{" "}
             <strong>
               {correctAnswers} / {questions.length}
             </strong>
           </p>
 
           <p>
-            Accuracy: <strong>{accuracy}%</strong>
+            {t("accuracy")}: <strong>{accuracy}%</strong>
           </p>
 
           <p>
-            Difficulty:{" "}
-            <strong>Level {difficulty}</strong>
+            {t("difficulty")}:{" "}
+            <strong>{t("objectRecognitionDifficultyLevel").replace("{level}", String(difficulty))}</strong>
           </p>
 
           {saveMessage && (
@@ -607,7 +592,7 @@ function ObjectRecognition({ onBack, language = "en-IN", regionalMode = false })
             className="start-button"
             onClick={onBack}
           >
-            Back to Home
+            {t("backToHome")}
           </button>
         </div>
       </div>
@@ -615,7 +600,13 @@ function ObjectRecognition({ onBack, language = "en-IN", regionalMode = false })
   }
 
   const question = questions[currentQuestion];
-  const objectLabels = isHindi ? hindiObjectLabels : isTelugu ? teluguObjectLabels : isAssamese ? assameseObjectLabels : isBengali ? bengaliObjectLabels : isNagamese ? nagameseObjectLabels : null;
+  const objectLabels = {
+    "hi-IN": hindiObjectLabels,
+    "te-IN": teluguObjectLabels,
+    "as-IN": assameseObjectLabels,
+    "bn-IN": bengaliObjectLabels,
+    "nag-IN": nagameseObjectLabels,
+  }[language];
   const displayQuestion = objectLabels
     ? { ...question, options: question.options.map((option) => objectLabels[option] || option) }
     : question;
@@ -626,38 +617,38 @@ function ObjectRecognition({ onBack, language = "en-IN", regionalMode = false })
         className="back-button"
         onClick={onBack}
       >
-        ← {text.back}
+        ← {t("back")}
       </button>
 
       <div className="game-header object-recognition-game-header">
         <p className="eyebrow">
-          {text.eyebrow}
+          {t("objectRecognitionActivity")}
         </p>
 
-        <h1>{text.title}</h1>
-
-        <p>
-          {isHindi ? "वस्तु को देखें और सही नाम चुनें।" : isTelugu ? "వస్తువును చూసి సరైన పేరును ఎంచుకోండి." : "Look at the object and choose the correct name."}
-        </p>
+        <h1>{t("objectRecognitionTitle")}</h1>
 
         <p>
-          {text.question} {currentQuestion + 1} {(isHindi || isTelugu) ? "/" : "of"} {questions.length}
+          {t("objectRecognitionDescription")}
         </p>
-        <div className="object-recognition-status" aria-label="Activity progress">
+
+        <p>
+          {t("objectRecognitionQuestionProgress").replace("{current}", String(currentQuestion + 1)).replace("{total}", String(questions.length))}
+        </p>
+        <div className="object-recognition-status" aria-label={t("activityProgress")}>
           <div>
-            <span>{text.question}</span>
-            <strong>{currentQuestion + 1} {(isHindi || isTelugu) ? "/" : "of"} {questions.length}</strong>
+            <span>{t("question")}</span>
+            <strong>{t("objectRecognitionQuestionProgress").replace("{current}", String(currentQuestion + 1)).replace("{total}", String(questions.length))}</strong>
           </div>
           <div>
-            <span>{text.correct}</span>
+            <span>{t("correctAnswers")}</span>
             <strong>{correctAnswers}</strong>
           </div>
           <div>
-            <span>{text.level}</span>
+            <span>{t("activityLevel")}</span>
             <strong>{difficulty}</strong>
           </div>
         </div>
-        <p className="object-recognition-tip">{text.tip}</p>
+        <p className="object-recognition-tip">{t("objectRecognitionTip")}</p>
       </div>
 
       <div className="object-question-card object-recognition-question-card">
@@ -665,7 +656,7 @@ function ObjectRecognition({ onBack, language = "en-IN", regionalMode = false })
           {displayQuestion.emoji}
         </div>
 
-        <h2>{text.prompt}</h2>
+        <h2>{t("whatIsThis")}</h2>
 
         <div className="object-options">
           {displayQuestion.options.map(
@@ -693,7 +684,7 @@ function ObjectRecognition({ onBack, language = "en-IN", regionalMode = false })
                     handleAnswer(index)
                   }
                   disabled={answered}
-                  aria-label={`Answer: ${option}`}
+                  aria-label={t("answerOption").replace("{option}", option)}
                 >
                   {option}
                 </button>

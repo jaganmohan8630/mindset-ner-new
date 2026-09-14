@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import { API_URL } from "../api";
-function PatientProfile({ onBack }) {
+import { getUIText } from "../uiTranslations";
+
+function PatientProfile({ onBack, language = "en-IN" }) {
+  const t = (key) => getUIText(language, key);
+  const genderLabel = (value) => {
+    const key = String(value || "").toLowerCase();
+    return ["female", "male", "other"].includes(key) ? t(key) : value;
+  };
+
   const [patient, setPatient] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -41,7 +49,7 @@ function PatientProfile({ onBack }) {
 
       if (!response.ok) {
         throw new Error(
-          data.message || "Failed to load patient profile",
+          data.message || t("failedToLoadProfile"),
         );
       }
 
@@ -66,7 +74,7 @@ function PatientProfile({ onBack }) {
     if (patientId && token) {
       loadPatient();
     } else {
-      setError("Patient account information is missing.");
+      setError(t("patientAccountInformationMissing"));
       setLoading(false);
     }
   }, []);
@@ -104,13 +112,13 @@ function PatientProfile({ onBack }) {
 
       if (!response.ok) {
         throw new Error(
-          data.message || "Failed to update profile",
+          data.message || t("failedToUpdateProfile"),
         );
       }
 
       setPatient(data.patient);
       setEditing(false);
-      setMessage("Profile updated successfully.");
+      setMessage(t("profileUpdatedSuccessfully"));
     } catch (err) {
       setError(err.message);
     }
@@ -119,7 +127,7 @@ function PatientProfile({ onBack }) {
   if (loading) {
     return (
       <div className="dashboard-container">
-        Loading profile...
+        {t("loadingProfile")}
       </div>
     );
   }
@@ -128,14 +136,14 @@ function PatientProfile({ onBack }) {
     return (
       <div className="dashboard-container">
         <p className="error-message">
-          {error || "Patient profile not found."}
+          {error || t("patientProfileNotFound")}
         </p>
 
         <button
           className="reminder-back-button"
           onClick={onBack}
         >
-          ← Back
+          ← {t("back")}
         </button>
       </div>
     );
@@ -145,12 +153,12 @@ function PatientProfile({ onBack }) {
     <div className="dashboard-container">
       <div className="dashboard-header">
         <div>
-          <p className="eyebrow">PATIENT ACCOUNT</p>
+          <p className="eyebrow">{t("patientAccount")}</p>
 
-          <h1>My Profile</h1>
+          <h1>{t("profile")}</h1>
 
           <p>
-            View and manage your personal information.
+            {t("viewProfile")}
           </p>
         </div>
 
@@ -158,7 +166,7 @@ function PatientProfile({ onBack }) {
           className="reminder-back-button"
           onClick={onBack}
         >
-          ← Back
+          ← {t("back")}
         </button>
       </div>
 
@@ -182,13 +190,13 @@ function PatientProfile({ onBack }) {
             </div>
 
             <div>
-              <p className="eyebrow">PATIENT</p>
+              <p className="eyebrow">{t("patient")}</p>
 
               <h2>{patient.name}</h2>
 
               <p>
-                {patient.age} years old •{" "}
-                {patient.gender}
+                {patient.age} {t("yearsOld")} •{" "}
+                {genderLabel(patient.gender)}
               </p>
             </div>
           </div>
@@ -196,55 +204,55 @@ function PatientProfile({ onBack }) {
           <div className="profile-grid">
             <div className="profile-info-card">
               <span>🎂</span>
-              <p className="eyebrow">AGE</p>
-              <h3>{patient.age} years</h3>
+              <p className="eyebrow">{t("age")}</p>
+              <h3>{patient.age} {t("years")}</h3>
             </div>
 
             <div className="profile-info-card">
               <span>⚧</span>
-              <p className="eyebrow">GENDER</p>
-              <h3>{patient.gender}</h3>
+              <p className="eyebrow">{t("gender")}</p>
+              <h3>{genderLabel(patient.gender)}</h3>
             </div>
 
             <div className="profile-info-card">
               <span>🌐</span>
-              <p className="eyebrow">LANGUAGE</p>
+              <p className="eyebrow">{t("language")}</p>
               <h3>{patient.language}</h3>
             </div>
 
             <div className="profile-info-card">
               <span>🧠</span>
               <p className="eyebrow">
-                COGNITIVE LEVEL
+                {t("cognitiveLevel")}
               </p>
               <h3>
-                Level {patient.difficultyLevel}
+                {t("level")} {patient.difficultyLevel}
               </h3>
             </div>
           </div>
 
           <div className="profile-caregiver-card">
             <p className="eyebrow">
-              CAREGIVER INFORMATION
+              {t("caregiverInformation")}
             </p>
 
-            <h2>{patient.caregiverName || "Not provided"}</h2>
+            <h2>{patient.caregiverName || t("notProvided")}</h2>
 
             <p>
               📞{" "}
               {patient.caregiverPhone ||
-                "Phone number not provided"}
+                t("phoneNumberNotProvided")}
             </p>
           </div>
 
           <div className="profile-status-card">
             <div>
-              <p className="eyebrow">ACCOUNT STATUS</p>
+              <p className="eyebrow">{t("accountStatus")}</p>
 
               <h2>
                 {patient.isActive
-                  ? "🟢 Active"
-                  : "🔴 Inactive"}
+                  ? `🟢 ${t("active")}`
+                  : `🔴 ${t("inactive")}`}
               </h2>
             </div>
 
@@ -256,19 +264,19 @@ function PatientProfile({ onBack }) {
                 setEditing(true);
               }}
             >
-              Edit Profile
+              {t("editProfile")}
             </button>
           </div>
         </>
       ) : (
         <div className="profile-edit-card">
-          <p className="eyebrow">EDIT PROFILE</p>
+          <p className="eyebrow">{t("editProfile")}</p>
 
-          <h2>Update Patient Information</h2>
+          <h2>{t("updatePatientInformation")}</h2>
 
           <form onSubmit={updateProfile}>
             <label>
-              Name
+              {t("name")}
               <input
                 name="name"
                 value={form.name}
@@ -278,7 +286,7 @@ function PatientProfile({ onBack }) {
             </label>
 
             <label>
-              Age
+              {t("age")}
               <input
                 type="number"
                 name="age"
@@ -291,20 +299,20 @@ function PatientProfile({ onBack }) {
             </label>
 
             <label>
-              Gender
+              {t("gender")}
               <select
                 name="gender"
                 value={form.gender}
                 onChange={handleChange}
               >
-                <option value="female">Female</option>
-                <option value="male">Male</option>
-                <option value="other">Other</option>
+                <option value="female">{t("female")}</option>
+                <option value="male">{t("male")}</option>
+                <option value="other">{t("other")}</option>
               </select>
             </label>
 
             <label>
-              Language
+              {t("language")}
               <input
                 name="language"
                 value={form.language}
@@ -313,7 +321,7 @@ function PatientProfile({ onBack }) {
             </label>
 
             <label>
-              Caregiver Name
+              {t("caregiverName")}
               <input
                 name="caregiverName"
                 value={form.caregiverName}
@@ -322,7 +330,7 @@ function PatientProfile({ onBack }) {
             </label>
 
             <label>
-              Caregiver Phone
+              {t("caregiverPhone")}
               <input
                 name="caregiverPhone"
                 value={form.caregiverPhone}
@@ -335,7 +343,7 @@ function PatientProfile({ onBack }) {
                 type="submit"
                 className="start-button"
               >
-                Save Changes
+                {t("saveChanges")}
               </button>
 
               <button
@@ -343,7 +351,7 @@ function PatientProfile({ onBack }) {
                 className="secondary-button"
                 onClick={() => setEditing(false)}
               >
-                Cancel
+                {t("cancel")}
               </button>
             </div>
           </form>

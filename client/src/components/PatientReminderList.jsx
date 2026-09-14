@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { API_URL } from "../api";
 import { socket } from "../socket";
+import { getUIText } from "../uiTranslations";
 
-function PatientReminderList({ onBack }) {
+function PatientReminderList({ onBack, language = "en-IN" }) {
+  const t = (key) => getUIText(language, key);
   const [reminders, setReminders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -36,13 +38,13 @@ function PatientReminderList({ onBack }) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to load reminders");
+        throw new Error(data.message || t("failedToLoadReminders"));
       }
 
       setReminders(data.reminders || []);
     } catch (err) {
       console.error(err);
-      setError("Unable to load reminders.");
+      setError(t("unableToLoadReminders"));
     } finally {
       setLoading(false);
     }
@@ -116,30 +118,33 @@ function PatientReminderList({ onBack }) {
   };
 
   const getLabel = (type) => {
-    if (type === "medicine") return "Medicine";
-    if (type === "hydration") return "Hydration";
-    if (type === "daily_activity") return "Daily Activity";
-    if (type === "appointment") return "Appointment";
-    return "Reminder";
+    if (type === "medicine") return t("medicine");
+    if (type === "hydration") return t("hydration");
+    if (type === "daily_activity") return t("dailyActivity");
+    if (type === "appointment") return t("appointment");
+    return t("reminder");
   };
 
   const getRecurrence = (recurrence) => {
-    if (recurrence === "daily") return "Every day";
-    if (recurrence === "weekly") return "Every week";
-    return "Once";
+    if (recurrence === "daily") return t("everyDay");
+    if (recurrence === "weekly") return t("everyWeek");
+    return t("once");
   };
 
   const activeReminders = reminders.filter((reminder) => reminder.active);
+  const activeReminderLabel = activeReminders.length === 1
+    ? t("activeReminder")
+    : t("activeReminders");
 
   if (loading) {
     return (
       <div className="dashboard-page">
         <button className="back-button" onClick={onBack}>
-          ← Back
+          ← {t("back")}
         </button>
 
         <div className="dashboard-loading">
-          Loading reminders...
+          {t("loadingReminders")}
         </div>
       </div>
     );
@@ -148,23 +153,22 @@ function PatientReminderList({ onBack }) {
   return (
     <div className="dashboard-page">
       <button className="back-button" onClick={onBack}>
-        ← Back
+        ← {t("back")}
       </button>
 
       <div className="reminders-page-header patient-reminders-hero">
-        <p className="eyebrow">PATIENT REMINDERS</p>
+        <p className="eyebrow">{t("patientReminders")}</p>
 
-        <h1>My Reminders</h1>
+        <h1>{t("myReminders")}</h1>
 
         <p>
-          View your scheduled medicines, activities, hydration,
-          and appointments.
+          {t("reminderPageDescription")}
         </p>
 
-        <div className="reminder-total-card" aria-label={`${activeReminders.length} active reminders`}>
-          <span>Today&apos;s routine</span>
+        <div className="reminder-total-card" aria-label={`${activeReminders.length} ${activeReminderLabel}`}>
+          <span>{t("todaysRoutine")}</span>
           <strong>{activeReminders.length}</strong>
-          <small>active reminder{activeReminders.length === 1 ? "" : "s"}</small>
+          <small>{activeReminderLabel}</small>
         </div>
       </div>
 
@@ -178,46 +182,46 @@ function PatientReminderList({ onBack }) {
         <div className="empty-reminders-card">
           <div className="empty-reminders-icon">🔔</div>
 
-          <h2>No reminders yet</h2>
+          <h2>{t("noReminders")}</h2>
 
           <p>
-            Your caregiver has not added any reminders yet.
+            {t("caregiverHasNotAddedReminders")}
           </p>
         </div>
       )}
 
       <div className="patient-reminders-list">
         {activeReminders.map((reminder) => (
-            <div
-              className="patient-reminder-list-card"
-              key={reminder._id}
-            >
-              <div className="patient-reminder-list-icon">
-                {getIcon(reminder.type)}
-              </div>
-
-              <div className="patient-reminder-list-content">
-                <span className="patient-reminder-list-type">
-                  {getLabel(reminder.type)}
-                </span>
-
-                <h2>{reminder.title}</h2>
-
-                {reminder.description && (
-                  <p>{reminder.description}</p>
-                )}
-
-                <div className="patient-reminder-list-details">
-                  <span>🕐 {reminder.scheduledTime}</span>
-
-                  <span>
-                    🔁 {getRecurrence(reminder.recurrence)}
-                  </span>
-                </div>
-              </div>
-              <span className="patient-reminder-active-status">Active</span>
+          <div
+            className="patient-reminder-list-card"
+            key={reminder._id}
+          >
+            <div className="patient-reminder-list-icon">
+              {getIcon(reminder.type)}
             </div>
-          ))}
+
+            <div className="patient-reminder-list-content">
+              <span className="patient-reminder-list-type">
+                {getLabel(reminder.type)}
+              </span>
+
+              <h2>{reminder.title}</h2>
+
+              {reminder.description && (
+                <p>{reminder.description}</p>
+              )}
+
+              <div className="patient-reminder-list-details">
+                <span>🕐 {reminder.scheduledTime}</span>
+
+                <span>
+                  🔁 {getRecurrence(reminder.recurrence)}
+                </span>
+              </div>
+            </div>
+            <span className="patient-reminder-active-status">{t("active")}</span>
+          </div>
+        ))}
       </div>
     </div>
   );

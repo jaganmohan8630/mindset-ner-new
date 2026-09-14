@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { API_URL } from "../api";
 import { socket } from "../socket";
+import { getUIText } from "../uiTranslations";
 import "./ElderMessages.css";
 
 const MicrophonePermission = registerPlugin("MicrophonePermission");
@@ -14,7 +15,8 @@ const base64ToBlob = (base64, mimeType) => {
   return new Blob([bytes], { type: mimeType });
 };
 
-export default function ElderMessages({ onBack }) {
+export default function ElderMessages({ onBack, language = "en-IN" }) {
+  const t = (key) => getUIText(language, key);
   const token = localStorage.getItem("mindset_ner_token");
   const headers = { Authorization: `Bearer ${token}` };
   const [connections, setConnections] = useState([]);
@@ -95,13 +97,13 @@ export default function ElderMessages({ onBack }) {
       await new Promise((resolve) => window.setTimeout(resolve, 350));
       if (Capacitor.isNativePlatform()) {
         const permission = await MicrophonePermission.request();
-        if (permission.microphone !== "granted") throw new Error("Allow Microphone in Android Settings, then try again.");
+        if (permission.microphone !== "granted") throw new Error(t("allowMicrophoneInSettings"));
         await NativeAudioRecorder.start();
         nativeRecording.current = true;
         setRecording(true);
         return;
       }
-      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) throw new Error("Recording is not available in this browser.");
+      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) throw new Error(t("recordingUnavailableInBrowser"));
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       recordingStream.current = stream;
       const mediaRecorder = new MediaRecorder(stream);
@@ -119,7 +121,7 @@ export default function ElderMessages({ onBack }) {
     } catch (error) {
       nativeRecording.current = false;
       releaseRecordingStream();
-      setNotice(error?.message || "Unable to start voice recording.");
+      setNotice(error?.message || t("unableToStartVoiceRecording"));
     }
   };
 
@@ -137,7 +139,7 @@ export default function ElderMessages({ onBack }) {
     } catch (error) {
       nativeRecording.current = false;
       setFinalizing(false);
-      setNotice(error?.message || "Unable to save voice recording. Please record for at least one second.");
+      setNotice(error?.message || t("unableToSaveVoiceRecording"));
     }
   };
 
@@ -149,20 +151,20 @@ export default function ElderMessages({ onBack }) {
       const audio = new Audio(url);
       audio.onended = () => URL.revokeObjectURL(url);
       await audio.play();
-    } catch { setNotice("Unable to play this voice message."); }
+    } catch { setNotice(t("unableToPlayVoiceMessage")); }
   };
 
   return <main className="elder-messages-page">
-    <button className="elder-back" onClick={onBack}>← Back</button>
-    <h1>💬 Elder Messages</h1>
+    <button className="elder-back" onClick={onBack}>← {t("back")}</button>
+    <h1>💬 {t("elderMessages")}</h1>
     {notice && <p className="message-notice">{notice}</p>}
-    <div className="elder-messages-layout"><aside><h2>Connected Elders</h2>
-      {connections.length ? connections.map((person) => <button key={person.id} className={selected?.id === person.id ? "selected" : ""} onClick={() => setSelected(person)}><strong>{person.name}</strong><small>Age {person.age} · {person.language}</small></button>) : <p>No elder connections yet.</p>}
+    <div className="elder-messages-layout"><aside><h2>{t("connectedElders")}</h2>
+      {connections.length ? connections.map((person) => <button key={person.id} className={selected?.id === person.id ? "selected" : ""} onClick={() => setSelected(person)}><strong>{person.name}</strong><small>{t("age")} {person.age} · {person.language}</small></button>) : <p>{t("noElderConnections")}</p>}
     </aside><section>{selected ? <>
-      <header><h2>{selected.name}</h2><span>Connected</span></header>
-      <div className="message-list">{messages.length ? messages.map((message) => <article className={message.mine ? "mine" : "theirs"} key={message.id}>{message.type === "text" ? <p>{message.text}</p> : <button onClick={() => playAudio(message)}>▶ Play voice message</button>}<small>{new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</small></article>) : <p className="empty-message">Start a friendly conversation.</p>}</div>
-      <form onSubmit={sendText}><input value={text} onChange={(event) => setText(event.target.value)} maxLength="1000" placeholder="Write a message" aria-label="Write a message" /><button type="submit">Send</button></form>
-      <button disabled={finalizing} className={recording ? "recording" : "voice-message-button"} onClick={recording ? stopRecording : startRecording}>{recording ? "■ Stop and send voice message" : finalizing ? "Sending voice message…" : "🎙 Record voice message"}</button>
-    </> : <p>Select an elder to start messaging.</p>}</section></div>
+      <header><h2>{selected.name}</h2><span>{t("connected")}</span></header>
+      <div className="message-list">{messages.length ? messages.map((message) => <article className={message.mine ? "mine" : "theirs"} key={message.id}>{message.type === "text" ? <p>{message.text}</p> : <button onClick={() => playAudio(message)}>▶ {t("playVoiceMessage")}</button>}<small>{new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</small></article>) : <p className="empty-message">{t("startConversation")}</p>}</div>
+      <form onSubmit={sendText}><input value={text} onChange={(event) => setText(event.target.value)} maxLength="1000" placeholder={t("writeMessage")} aria-label={t("writeMessage")} /><button type="submit">{t("send")}</button></form>
+      <button disabled={finalizing} className={recording ? "recording" : "voice-message-button"} onClick={recording ? stopRecording : startRecording}>{recording ? `■ ${t("stopAndSendVoiceMessage")}` : finalizing ? t("sendingVoiceMessage") : `🎙 ${t("recordVoiceMessage")}`}</button>
+    </> : <p>{t("selectElder")}</p>}</section></div>
   </main>;
 }
