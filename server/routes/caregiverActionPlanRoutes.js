@@ -41,7 +41,7 @@ router.put("/:patientId/actions/:actionKey", protect, requireCaregiver, authoriz
       }
       action = await CaregiverActionPlan.findOneAndUpdate(
         { patientId: req.params.patientId, caregiverId: req.user.userId, actionKey: req.params.actionKey },
-        { $setOnInsert: { patientId: req.params.patientId, caregiverId: req.user.userId, actionKey: req.params.actionKey, actionType: submittedAction.actionType, recommendation: submittedAction.recommendation, reason: submittedAction.reason, priority: submittedAction.priority, status: "pending" } },
+        { $setOnInsert: { patientId: req.params.patientId, caregiverId: req.user.userId, actionKey: req.params.actionKey, actionType: submittedAction.actionType, recommendation: submittedAction.recommendation, reason: submittedAction.reason, recommendationCode: submittedAction.recommendationCode || null, recommendationParams: submittedAction.recommendationParams || null, reasonCode: submittedAction.reasonCode || null, reasonParams: submittedAction.reasonParams || null, reasonSuffixCode: submittedAction.reasonSuffixCode || null, priority: submittedAction.priority, status: "pending" } },
         { returnDocument: "after", upsert: true, runValidators: true, setDefaultsOnInsert: true },
       );
     }

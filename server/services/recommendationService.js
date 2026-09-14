@@ -50,6 +50,7 @@ async function getActivityRecommendation(patientId) {
   if (totalSessions === 0) {
     return {
       activity: "Memory Activity",
+      activityCode: "memory",
       difficulty: 1,
 
       memoryScore: 0,
@@ -69,6 +70,8 @@ async function getActivityRecommendation(patientId) {
 
       reason:
         "No previous activity history. Starting with a simple memory activity.",
+      reasonCode: "recommendationNoHistory",
+      reasonParams: {},
       basedOnSessions: 0,
     };
   }
@@ -114,6 +117,7 @@ async function getActivityRecommendation(patientId) {
   const weakestActivity = availableActivities[0];
 
   let activity = weakestActivity.name;
+  let activityCode = weakestActivity.type;
   let difficulty = 1;
 
   const adaptiveRecommendation = await getRecommendedDifficulty(
@@ -124,6 +128,8 @@ async function getActivityRecommendation(patientId) {
   difficulty = adaptiveRecommendation.difficulty;
 
   let reason = "";
+  let reasonCode = "";
+  let reasonParams = {};
   let priority = "low";
   const mood = latestMood?.mood;
 
@@ -143,12 +149,16 @@ async function getActivityRecommendation(patientId) {
     reason = `${weakestActivity.name} performance is currently ${Math.round(
       weakestPerformance,
     )}%. Additional practice and caregiver support are recommended.`;
+    reasonCode = "recommendationLowPerformance";
+    reasonParams = { activityCode: weakestActivity.type, score: Math.round(weakestPerformance) };
   } else if (weakestPerformance < 80) {
     priority = "medium";
 
     reason = `${weakestActivity.name} performance is currently ${Math.round(
       weakestPerformance,
     )}%. Additional practice is recommended.`;
+    reasonCode = "recommendationMediumPerformance";
+    reasonParams = { activityCode: weakestActivity.type, score: Math.round(weakestPerformance) };
   } else {
     /*
      * If all available activities are performing reasonably well,
@@ -160,16 +170,21 @@ async function getActivityRecommendation(patientId) {
 
     if (leastRecentlyPracticed) {
       activity = leastRecentlyPracticed.name;
+      activityCode = leastRecentlyPracticed.type;
       difficulty = 1;
       priority = "low";
 
       reason = `${activity} has not been practiced recently, so it is recommended to broaden cognitive training.`;
+      reasonCode = "recommendationUnpracticedActivity";
+      reasonParams = { activityCode };
     } else {
       activity = weakestActivity.name;
       priority = "low";
 
       reason =
         "Recent cognitive performance is stable, so continued practice of the lowest-performing activity is recommended.";
+      reasonCode = "recommendationStablePerformance";
+      reasonParams = { activityCode: weakestActivity.type };
     }
   }
   if (mood === "sad" || mood === "worried") {
@@ -181,8 +196,18 @@ async function getActivityRecommendation(patientId) {
   } else if (mood === "okay") {
     reason += " The patient appears to be doing okay.";
   }
+  const reasonSuffixCode = mood === "sad" || mood === "worried"
+    ? "recommendationMoodSupport"
+    : mood === "happy"
+      ? "recommendationMoodPositive"
+      : mood === "neutral"
+        ? "recommendationMoodCalm"
+        : mood === "okay"
+          ? "recommendationMoodOkay"
+          : undefined;
   return {
     activity,
+    activityCode,
     difficulty,
     priority,
     memoryScore: Math.round(scores.memory),
@@ -201,6 +226,9 @@ async function getActivityRecommendation(patientId) {
     objectRecognitionAccuracy: Math.round(accuracies.objectRecognition),
 
     reason,
+    reasonCode,
+    reasonParams,
+    reasonSuffixCode,
     basedOnSessions: totalSessions,
   };
 }

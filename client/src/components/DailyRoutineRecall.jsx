@@ -1,19 +1,22 @@
 import { useEffect, useState } from "react";
 import { API_URL } from "../api";
-import { assameseRoutineQuestions, bengaliRoutineQuestions, hindiRoutineQuestions, nagameseRoutineQuestions, teluguRoutineQuestions } from "../activityTranslations";
+import {
+  assameseRegionalRoutineQuestions,
+  assameseRoutineQuestions,
+  bengaliRegionalRoutineQuestions,
+  bengaliRoutineQuestions,
+  hindiRegionalRoutineQuestions,
+  hindiRoutineQuestions,
+  nagameseRegionalRoutineQuestions,
+  nagameseRoutineQuestions,
+  teluguRegionalRoutineQuestions,
+  teluguRoutineQuestions,
+} from "../activityTranslations";
 import { NER_ROUTINE_QUESTIONS } from "../culturalContent/nerContent";
+import { getUIText } from "../uiTranslations";
 
 function DailyRoutineRecall({ onBack, language = "en-IN", regionalMode = false }) {
-  const isHindi = language === "hi-IN";
-  const isTelugu = language === "te-IN";
-  const isAssamese = language === "as-IN";
-  const isBengali = language === "bn-IN";
-  const isNagamese = language === "nag-IN";
-  const text = isTelugu
-    ? { eyebrow: "రోజువారీ దినచర్య గుర్తింపు", title: "మీ దినచర్యను గుర్తు చేసుకోండి", preparing: "మీ కార్యకలాపం సిద్ధమవుతోంది...", description: "మీ సాధారణ రోజువారీ పనుల గురించి ఆలోచించి సరైన సమాధానాన్ని ఎంచుకోండి.", question: "ప్రశ్న", correct: "సరైన సమాధానాలు", level: "కార్యకలాప స్థాయి", tip: "ప్రతి ఎంపికను జాగ్రత్తగా చదివి సరైన సమాధానాన్ని ఎంచుకోండి." }
-    : isAssamese ? { eyebrow: "দৈনন্দিন দিনচৰ্যা মনত পেলোৱা", title: "আপোনাৰ দিনচৰ্যা মনত পেলাওক", preparing: "আপোনাৰ কাৰ্যকলাপ প্ৰস্তুত হৈ আছে...", description: "আপোনাৰ দৈনন্দিন কামবোৰৰ বিষয়ে ভাবক আৰু সঠিক উত্তৰ বাছক।", question: "প্ৰশ্ন", correct: "সঠিক উত্তৰ", level: "কাৰ্যকলাপৰ স্তৰ", tip: "প্ৰতিটো বিকল্প মনোযোগেৰে পঢ়ক আৰু সঠিক উত্তৰ বাছক।" }
-    : isBengali ? { eyebrow: "দৈনন্দিন রুটিন স্মরণ", title: "আপনার রুটিন মনে করুন", preparing: "আপনার কার্যক্রম প্রস্তুত হচ্ছে...", description: "আপনার দৈনন্দিন কাজের কথা ভাবুন এবং সঠিক উত্তরটি বেছে নিন।", question: "প্রশ্ন", correct: "সঠিক উত্তর", level: "কার্যক্রমের স্তর", tip: "প্রতিটি বিকল্প মনোযোগ দিয়ে পড়ুন এবং সঠিক উত্তরটি বেছে নিন।" }
-    : isNagamese ? { eyebrow: "Daily routine recall", title: "Apunar routine monot anibo", preparing: "Apunar activity ready kori ase...", description: "Apunar roj kaam khan bhabi aru thik answer bachibo.", question: "Question", correct: "Thik answer", level: "Activity level", tip: "Protek option bhal porhi aru thik answer bachibo." } : null;
+  const t = (key) => getUIText(language, key);
   const user = JSON.parse(localStorage.getItem("mindset_ner_user") || "null");
 
   const patientId = user?.patientId;
@@ -197,7 +200,17 @@ function DailyRoutineRecall({ onBack, language = "en-IN", regionalMode = false }
       count = 10;
     }
 
-    const activeQuestionBank = regionalMode && language === "en-IN" ? [...questionBank, ...NER_ROUTINE_QUESTIONS] : questionBank;
+    const regionalQuestions = {
+      "en-IN": NER_ROUTINE_QUESTIONS,
+      "hi-IN": hindiRegionalRoutineQuestions,
+      "te-IN": teluguRegionalRoutineQuestions,
+      "as-IN": assameseRegionalRoutineQuestions,
+      "bn-IN": bengaliRegionalRoutineQuestions,
+      "nag-IN": nagameseRegionalRoutineQuestions,
+    }[language] || NER_ROUTINE_QUESTIONS;
+    const activeQuestionBank = regionalMode
+      ? [...questionBank, ...regionalQuestions.map((question) => ({ ...question, isRegionalRoutineQuestion: true }))]
+      : questionBank;
     const shuffled = [...activeQuestionBank]
       .sort(() => Math.random() - 0.5)
       .slice(0, count);
@@ -389,9 +402,9 @@ function DailyRoutineRecall({ onBack, language = "en-IN", regionalMode = false }
     return (
       <div className="game-page">
         <div className="game-header">
-          <p className="eyebrow">{text?.eyebrow || (isHindi ? "दैनिक दिनचर्या" : "DAILY ROUTINE")}</p>
+          <p className="eyebrow">{t("dailyRoutineRecallActivityName")}</p>
 
-          <h1>{text?.preparing || (isHindi ? "आपकी गतिविधि तैयार की जा रही है..." : "Preparing your activity...")}</h1>
+          <h1>{t("preparingActivity")}</h1>
         </div>
       </div>
     );
@@ -406,33 +419,33 @@ function DailyRoutineRecall({ onBack, language = "en-IN", regionalMode = false }
     return (
       <div className="game-page">
         <div className="game-header">
-          <p className="eyebrow">DAILY ROUTINE RECALL</p>
+          <p className="eyebrow">{t("dailyRoutineRecallActivityName")}</p>
 
-          <h1>Well done!</h1>
+          <h1>{t("wellDone")}</h1>
 
-          <p>You completed today's routine recall activity.</p>
+          <p>{t("dailyRoutineRecallCompletion")}</p>
         </div>
 
         <div className="routine-recall-card">
           {" "}
-          <h2>Activity Complete</h2>
+          <h2>{t("activityComplete")}</h2>
           <p>
-            Score: <strong>{score}</strong>
+            {t("score")}: <strong>{score}</strong>
           </p>
           <p>
-            Correct answers:{" "}
+            {t("correctAnswers")}:{" "}
             <strong>
               {correctAnswers} / {questions.length}
             </strong>
           </p>
           <p>
-            Accuracy: <strong>{accuracy}%</strong>
+            {t("accuracy")}: <strong>{accuracy}%</strong>
           </p>
           <p>
-            Difficulty: <strong>Level {difficulty}</strong>
+            {t("difficulty")}: <strong>{t("dailyRoutineRecallDifficultyLevel").replace("{level}", String(difficulty))}</strong>
           </p>
           <button className="start-button" onClick={onBack}>
-            Back to Home
+            {t("backToHome")}
           </button>
         </div>
       </div>
@@ -440,8 +453,16 @@ function DailyRoutineRecall({ onBack, language = "en-IN", regionalMode = false }
   }
 
   const question = questions[currentQuestion];
-  const localizedQuestions = isHindi ? hindiRoutineQuestions : isTelugu ? teluguRoutineQuestions : isAssamese ? assameseRoutineQuestions : isBengali ? bengaliRoutineQuestions : isNagamese ? nagameseRoutineQuestions : null;
-  const displayQuestion = localizedQuestions?.[currentQuestion]
+  const localizedQuestions = {
+    "hi-IN": hindiRoutineQuestions,
+    "te-IN": teluguRoutineQuestions,
+    "as-IN": assameseRoutineQuestions,
+    "bn-IN": bengaliRoutineQuestions,
+    "nag-IN": nagameseRoutineQuestions,
+  }[language];
+  const displayQuestion = question.isRegionalRoutineQuestion
+    ? question
+    : localizedQuestions?.[currentQuestion]
     ? { ...question, question: localizedQuestions[currentQuestion][0], options: localizedQuestions[currentQuestion][1] }
     : question;
 
@@ -452,36 +473,36 @@ function DailyRoutineRecall({ onBack, language = "en-IN", regionalMode = false }
   return (
     <div className="game-page routine-recall-game-page">
       <button className="back-button" onClick={onBack}>
-        ← Back
+        ← {t("back")}
       </button>
 
       <div className="game-header routine-recall-game-header">
-        <p className="eyebrow">{text?.eyebrow || (isHindi ? "दैनिक दिनचर्या स्मरण" : "DAILY ROUTINE RECALL")}</p>
+        <p className="eyebrow">{t("dailyRoutineRecallActivityName")}</p>
 
-        <h1>{text?.title || (isHindi ? "अपनी दिनचर्या याद करें" : "Remember your routine")}</h1>
+        <h1>{t("dailyRoutineRecallTitle")}</h1>
 
         <p>
-          {text?.description || (isHindi ? "अपनी रोज़ की गतिविधियों के बारे में सोचें और सबसे अच्छा उत्तर चुनें।" : "Think about your usual daily activities and choose the best answer.")}
+          {t("dailyRoutineRecallDescription")}
         </p>
 
         <p>
-          {text?.question || (isHindi ? "प्रश्न" : "Question")} {currentQuestion + 1} {(isHindi || isTelugu) ? "/" : "of"} {questions.length}
+          {t("dailyRoutineRecallQuestionProgress").replace("{current}", String(currentQuestion + 1)).replace("{total}", String(questions.length))}
         </p>
-        <div className="routine-recall-status" aria-label="Activity progress">
+        <div className="routine-recall-status" aria-label={t("activityProgress")}>
           <div>
-            <span>{text?.question || "Question"}</span>
-            <strong>{currentQuestion + 1} {(isHindi || isTelugu) ? "/" : "of"} {questions.length}</strong>
+            <span>{t("question")}</span>
+            <strong>{t("dailyRoutineRecallQuestionProgress").replace("{current}", String(currentQuestion + 1)).replace("{total}", String(questions.length))}</strong>
           </div>
           <div>
-            <span>{text?.correct || (isHindi ? "सही उत्तर" : "Correct answers")}</span>
+            <span>{t("correctAnswers")}</span>
             <strong>{correctAnswers}</strong>
           </div>
           <div>
-            <span>{text?.level || (isHindi ? "गतिविधि स्तर" : "Activity level")}</span>
+            <span>{t("activityLevel")}</span>
             <strong>{difficulty}</strong>
           </div>
         </div>
-        <p className="routine-recall-tip">{text?.tip || (isHindi ? "हर विकल्प को ध्यान से पढ़ें और सही उत्तर चुनें।" : "Read each choice carefully, then select the answer that feels right.")}</p>
+        <p className="routine-recall-tip">{t("dailyRoutineRecallTip")}</p>
       </div>
 
       <div className="routine-question-card">
@@ -504,7 +525,7 @@ function DailyRoutineRecall({ onBack, language = "en-IN", regionalMode = false }
                 className={className}
                 onClick={() => handleAnswer(index)}
                 disabled={answered}
-                aria-label={`Answer: ${option}`}
+                aria-label={t("answerOption").replace("{option}", option)}
               >
                 {option}
               </button>

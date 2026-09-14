@@ -1,22 +1,3 @@
-const english = {
-  back: "Back", preparing: "Preparing your activity...", wellDone: "Well done!",
-  activityComplete: "Activity Complete", score: "Score", correctAnswers: "Correct answers",
-  accuracy: "Accuracy", difficulty: "Difficulty", level: "Level", backToHome: "Back to Home",
-  question: "Question", activityLevel: "Activity level", playAgain: "Play Again",
-  saving: "Saving your progress...",
-};
-
-const hindi = {
-  back: "वापस", preparing: "आपकी गतिविधि तैयार की जा रही है...", wellDone: "बहुत बढ़िया!",
-  activityComplete: "गतिविधि पूरी हुई", score: "स्कोर", correctAnswers: "सही उत्तर",
-  accuracy: "सटीकता", difficulty: "कठिनाई स्तर", level: "स्तर", backToHome: "होम पर वापस जाएँ",
-  question: "प्रश्न", activityLevel: "गतिविधि स्तर", playAgain: "फिर से खेलें",
-  saving: "आपकी प्रगति सहेजी जा रही है...",
-};
-
-export const getActivityText = (language) =>
-  language === "hi-IN" ? hindi : english;
-
 export const hindiObjectLabels = {
   Spoon: "चम्मच", Book: "किताब", Cup: "कप", Clock: "घड़ी", Plate: "प्लेट", Bottle: "बोतल",
   Chair: "कुर्सी", Key: "चाबी", Mango: "आम", Banana: "केला", Orange: "संतरा", Apple: "सेब",
@@ -111,6 +92,51 @@ export const nagameseRoutineQuestions = [
   ["Rati te ghumabo jabar age ki kore?", ["Ghumabar tayari kore", "Breakfast khai", "Sokal shuru kore", "Duporiya khana khai"]],
 ];
 
+// Regional Daily Routine Recall content. These objects retain the same answer
+// positions as the English source questions in `NER_ROUTINE_QUESTIONS`.
+export const hindiRegionalRoutineQuestions = [
+  { question: "सुबह की चाय के बाद, परिचित दैनिक दिनचर्या का कौन-सा हिस्सा हो सकता है?", options: ["सुबह के काम जारी रखें", "रात के लिए सोने जाएँ", "रात का खाना खाएँ", "पूरा दिन छोड़ दें"], answer: 0 },
+  { question: "पास के बाज़ार या बगीचे से लौटते समय, क्या याद रखना सहायक है?", options: ["अपना सामान उसकी सामान्य जगह पर रखें", "सब कुछ बाहर छोड़ दें", "पूरे दिन पानी न पिएँ", "वापस सोने चले जाएँ"], answer: 0 },
+];
+
+export const teluguRegionalRoutineQuestions = [
+  { question: "ఉదయం టీ తర్వాత, పరిచయమైన రోజువారీ దినచర్యలో ఏది భాగం కావచ్చు?", options: ["ఉదయపు పనులను కొనసాగించడం", "రాత్రి కోసం పడుకోవడం", "రాత్రి భోజనం చేయడం", "రోజంతా పనులు మానేయడం"], answer: 0 },
+  { question: "దగ్గరలోని మార్కెట్ లేదా తోట నుంచి తిరిగి వస్తున్నప్పుడు, ఏది గుర్తుంచుకోవడం ఉపయోగకరం?", options: ["వస్తువులను వాటి సాధారణ స్థానంలో ఉంచడం", "అన్నింటినీ బయటే వదిలేయడం", "రోజంతా నీరు తాగకపోవడం", "మళ్లీ నిద్రపోవడానికి వెళ్లడం"], answer: 0 },
+];
+
+export const assameseRegionalRoutineQuestions = [
+  { question: "ৰাতিপুৱাৰ চাহৰ পিছত, চিনাকি দৈনন্দিন দিনচৰ্যাৰ কি অংশ হ'ব পাৰে?", options: ["ৰাতিপুৱাৰ কামবোৰ অব্যাহত ৰখা", "ৰাতিৰ বাবে শুবলৈ যোৱা", "ৰাতিৰ আহাৰ খোৱা", "গোটেই দিনটো এৰি দিয়া"], answer: 0 },
+  { question: "ওচৰৰ বজাৰ বা বাগিচাৰ পৰা উভতি আহোঁতে, কি মনত ৰখা সহায়ক?", options: ["নিজৰ বস্তুবোৰ সিহঁতৰ সাধাৰণ ঠাইত ৰখা", "সকলো বস্তু বাহিৰতে এৰি দিয়া", "গোটেই দিন পানী নোখোৱা", "আকৌ শুবলৈ যোৱা"], answer: 0 },
+];
+
+export const bengaliRegionalRoutineQuestions = [
+  { question: "সকালের চায়ের পরে, পরিচিত দৈনন্দিন রুটিনের কোনটি অংশ হতে পারে?", options: ["সকালের কাজ চালিয়ে যাওয়া", "রাতের জন্য ঘুমাতে যাওয়া", "রাতের খাবার খাওয়া", "সারাদিনের কাজ বাদ দেওয়া"], answer: 0 },
+  { question: "কাছের বাজার বা বাগান থেকে ফেরার সময় কোন বিষয়টি মনে রাখা সহায়ক?", options: ["নিজের জিনিসপত্র তাদের নির্দিষ্ট জায়গায় রাখা", "সবকিছু বাইরে রেখে দেওয়া", "সারাদিন পানি না খাওয়া", "আবার ঘুমাতে যাওয়া"], answer: 0 },
+];
+
+export const nagameseRegionalRoutineQuestions = [
+  { question: "Sokalor chaor pisot, chinaki roj routineor ki bhag thakibo pare?", options: ["Sokalor kaam khan jari rakhibo", "Rati lagi ghumabo jabo", "Rati khana khabo", "Gotei dinor kaam eri dibo"], answer: 0 },
+  { question: "Usoror bazaar na bagan pora ahi thakute, ki monot rakha bhal?", options: ["Nijor bostu khan nijor thik jagat rakhibo", "Sob bostu bahirot eri dibo", "Gotei din pani nakhabo", "Aru ekbar ghumabo jabo"], answer: 0 },
+];
+
 export const nagameseObjectLabels = {
   Spoon: "Chamuch", Book: "Kitab", Cup: "Cup", Clock: "Ghori", Plate: "Plate", Bottle: "Bottle", Chair: "Chair", Key: "Chabi", Mango: "Aam", Banana: "Kola", Orange: "Komola", Apple: "Apple", Rice: "Bhat", Bread: "Ruti", Water: "Pani", Milk: "Gakhir", Juice: "Rosh", Tea: "Cha", Table: "Table", Bed: "Bichana", Door: "Duwar", Television: "Television", "Mobile Phone": "Mobile phone", Radio: "Radio", Camera: "Camera", Broom: "Jharu", "Medicine Bottle": "Dawai bottle", "Water Bottle": "Pani bottle", Glass: "Glass", Umbrella: "Chata", Hat: "Topi", Bag: "Bag", Shoes: "Juta", Teapot: "Cha pot", Comb: "Foni", Toothbrush: "Toothbrush", Pen: "Kolom", "Water Bucket": "Pani bucket", Stethoscope: "Stethoscope", Thermometer: "Thermometer", Glasses: "Chasma", Watch: "Hat ghori", "Rice Crop": "Dhan khet", Flower: "Phul", Tree: "Gos", Grass: "Ghas", Basket: "Tukuri", Coconut: "Narikel",
 };
+
+// Regional Object Recognition content uses the same display-label maps as the
+// standard activity. English source content remains in `NER_OBJECTS`.
+Object.assign(hindiObjectLabels, {
+  "Leafy vegetables": "पत्तेदार सब्ज़ियाँ", "River valley": "नदी की घाटी", Road: "सड़क", Building: "इमारत", Station: "स्टेशन", Leaf: "पत्ता", Home: "घर", School: "विद्यालय", Market: "बाज़ार", Hospital: "अस्पताल", Rain: "बारिश", Sun: "सूरज", Wind: "हवा", Cloud: "बादल",
+});
+Object.assign(teluguObjectLabels, {
+  "Leafy vegetables": "ఆకుకూరలు", "River valley": "నది లోయ", Road: "రహదారి", Building: "భవనం", Station: "నిలయం", Leaf: "ఆకు", Home: "ఇల్లు", School: "పాఠశాల", Market: "మార్కెట్", Hospital: "ఆసుపత్రి", Rain: "వర్షం", Sun: "సూర్యుడు", Wind: "గాలి", Cloud: "మేఘం",
+});
+Object.assign(assameseObjectLabels, {
+  "Leafy vegetables": "পাত-শাক", "River valley": "নদীৰ উপত্যকা", Road: "পথ", Building: "অট্টালিকা", Station: "ষ্টেচন", Leaf: "পাত", Home: "ঘৰ", School: "বিদ্যালয়", Market: "বজাৰ", Hospital: "হাস্পতাল", Rain: "বৰষুণ", Sun: "সূৰ্য", Wind: "বতাহ", Cloud: "ডাৱৰ",
+});
+Object.assign(bengaliObjectLabels, {
+  "Leafy vegetables": "শাকপাতা", "River valley": "নদীর উপত্যকা", Road: "রাস্তা", Building: "ভবন", Station: "স্টেশন", Leaf: "পাতা", Home: "বাড়ি", School: "বিদ্যালয়", Market: "বাজার", Hospital: "হাসপাতাল", Rain: "বৃষ্টি", Sun: "সূর্য", Wind: "হাওয়া", Cloud: "মেঘ",
+});
+Object.assign(nagameseObjectLabels, {
+  "Leafy vegetables": "Pata sobji", "River valley": "Nodi upotyaka", Road: "Rasta", Building: "Dalan", Station: "Gari thamar jaiga", Leaf: "Pata", Home: "Ghor", School: "Porhar ghor", Market: "Bazaar", Hospital: "Daktar khana", Rain: "Boroxun", Sun: "Suruj", Wind: "Botah", Cloud: "Megh",
+});

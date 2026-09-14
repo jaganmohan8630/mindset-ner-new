@@ -3,7 +3,7 @@ import { API_URL } from "../api";
 import { socket } from "../socket";
 import CaregiverEmergencyAlerts from "./CaregiverEmergencyAlerts";
 import FamiliarPeopleManager from "./FamiliarPeopleManager";
-import { caregiverStatus, caregiverText } from "../caregiverTranslations";
+import { getUIText } from "../uiTranslations";
 import {
   LineChart,
   Line,
@@ -15,9 +15,53 @@ import {
   Legend,
 } from "recharts";
 
-function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () => {} }) {
-  const ct = (key) => caregiverText(language, key);
-  const activityLabel = (value) => ct(({ Memory: "memory", Attention: "attention", "Routine Recall": "routineRecall", "Pattern Recognition": "patternRecognition", "Object Recognition": "objectRecognition", "Family Familiarity": "familyFamiliarity", memory: "memory", attention: "attention", routineRecall: "routineRecall", pattern: "patternRecognition", objectRecognition: "objectRecognition", familyFamiliarity: "familyFamiliarity" })[value] || value);
+function CaregiverDashboard({ onBack, language = "en-IN" }) {
+  const t = (key) => getUIText(language, key);
+  const formatText = (key, values) => Object.entries(values).reduce(
+    (text, [name, value]) => text.replaceAll(`{${name}}`, value),
+    t(key),
+  );
+  const activityLabel = (value) => {
+    switch (value) {
+      case "Memory": case "Memory Activity": case "memory": return t("memory");
+      case "Attention": case "Attention Activity": case "attention": return t("attention");
+      case "Routine Recall": case "Daily Routine Recall": case "Daily Routine Recall Activity": case "routineRecall": return t("routineRecall");
+      case "Pattern Recognition": case "pattern": return t("patternRecognition");
+      case "Object Recognition": case "objectRecognition": return t("objectRecognition");
+      case "Family Familiarity": case "familyFamiliarity": return t("familyFamiliarity");
+      default: return value;
+    }
+  };
+  const statusLabel = (value) => {
+    switch (String(value)) {
+      case "Needs Attention": return t("needsAttention");
+      case "Monitor": return t("monitor");
+      case "Stable": return t("stable");
+      case "Improving": return t("improving");
+      case "Declining": return t("declining");
+      case "High": case "high": return t("high");
+      case "Medium": case "medium": return t("medium");
+      case "Moderate": case "moderate": return t("moderate");
+      case "Low": case "low": return t("low");
+      case "Insufficient data": return t("insufficientData");
+      case "completed": return t("completed");
+      case "dismissed": return t("dismissed");
+      case "pending": return t("pending");
+      case "Strong Performance": return t("strongPerformance");
+      case "Needs Support": return t("needsSupport");
+      case "Needs Monitoring": return t("needsMonitoring");
+      case "Generally Improving": return t("generallyImproving");
+      case "Generally Stable": return t("generallyStable");
+      default: return value;
+    }
+  };
+  const moodLabel = (mood, fallback) => ({ happy: t("moodHappy"), okay: t("moodOkay"), neutral: t("moodNotSure"), worried: t("moodWorried"), sad: t("moodSad") }[mood] || fallback || mood);
+  const localizedParams = (params = {}) => Object.fromEntries(Object.entries(params).map(([key, value]) => [key, key === "activityCode" ? activityLabel(value) : key === "moodCode" ? moodLabel(value) : key === "status" ? statusLabel(value) : value]));
+  const localizedValue = (item, field) => {
+    const code = item?.[`${field}Code`];
+    const text = code ? getUIText(language, code, localizedParams(item?.[`${field}Params`])) : item?.[field];
+    return field === "reason" && item?.reasonSuffixCode ? `${text} ${getUIText(language, item.reasonSuffixCode, localizedParams(item.reasonSuffixParams))}` : text;
+  };
   const [patient, setPatient] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [memoryAlert, setMemoryAlert] = useState(null);
@@ -47,29 +91,32 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
     if (!analytics) {
       return {
         status: "Stable",
-        message: "Not enough data to determine cognitive performance yet.",
+        message: t("insightNotEnoughData"),
       };
     }
 
     const activities = [
       {
-        name: "Memory",
+        name: t("memory"),
         performance: memoryAverage,
       },
       {
-        name: "Attention",
+        name: t("attention"),
         performance: attentionAverage,
       },
       {
-        name: "Routine Recall",
+        type: "routineRecall",
+        name: t("routineRecall"),
         performance: routineRecallAverage,
       },
       {
-        name: "Pattern Recognition",
+        type: "pattern",
+        name: t("patternRecognition"),
         performance: patternAverage,
       },
       {
-        name: "Object Recognition",
+        type: "objectRecognition",
+        name: t("objectRecognition"),
         performance: objectRecognitionAverage,
       },
     ].filter((activity) => activity.performance > 0);
@@ -77,8 +124,7 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
     if (activities.length === 0) {
       return {
         status: "Stable",
-        message:
-          "Not enough completed activities to determine cognitive performance yet.",
+        message: t("insightNoCompletedActivities"),
       };
     }
 
@@ -97,28 +143,27 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
     if (weakActivities.length === 0) {
       return {
         status: "Strong Performance",
-        message:
-          "Performance is strong across the completed cognitive activities. Continue regular practice to maintain progress.",
+        message: t("insightStrongMessage"),
       };
     }
 
     if (weakestActivity.performance < 60) {
       return {
         status: "Needs Support",
-        message: `${weakestActivity.name} performance is currently ${weakestActivity.performance}%. Additional practice and caregiver support may be helpful.`,
+        message: formatText("insightNeedsSupportMessage", { activity: weakestActivity.name, score: weakestActivity.performance }),
       };
     }
 
     if (strongActivities.length >= 2 && weakActivities.length === 1) {
       return {
-        status: `${weakestActivity.name} Needs Focus`,
-        message: `${weakestActivity.name} is currently the main area needing additional practice, while other completed activities are performing well.`,
+        status: "Needs Focus",
+        message: formatText("insightNeedsFocusMessage", { activity: weakestActivity.name }),
       };
     }
 
     return {
       status: "Needs Attention",
-      message: `Some cognitive activities are below the expected range. ${weakestActivity.name} is currently the lowest-performing area and should receive additional practice.`,
+      message: formatText("insightNeedsAttentionMessage", { activity: weakestActivity.name }),
     };
   };
 
@@ -159,11 +204,11 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
 
   const getOverallPatientStatus = () => {
     const activities = [
-      { name: "Memory", value: memoryAverage },
-      { name: "Attention", value: attentionAverage },
-      { name: "Routine Recall", value: routineRecallAverage },
-      { name: "Pattern Recognition", value: patternAverage },
-      { name: "Object Recognition", value: objectRecognitionAverage },
+      { name: t("memory"), value: memoryAverage },
+      { name: t("attention"), value: attentionAverage },
+      { name: t("routineRecall"), value: routineRecallAverage },
+      { name: t("patternRecognition"), value: patternAverage },
+      { name: t("objectRecognition"), value: objectRecognitionAverage },
     ];
 
     const performedActivities = activities.filter(
@@ -174,7 +219,7 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
 
     performedActivities.forEach((activity) => {
       if (activity.value < 80) {
-        concerns.push(`${activity.name} performance needs attention.`);
+        concerns.push(formatText("activityPerformanceNeedsAttention", { activity: activity.name }));
       }
     });
 
@@ -182,16 +227,15 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
     const missed = adherence?.missed ?? 0;
 
     if (adherence && adherenceRate < 80) {
-      concerns.push(`${missed} reminder${missed === 1 ? "" : "s"} missed.`);
+      concerns.push(formatText("remindersMissed", { count: missed }));
     }
 
     if (concerns.length === 0) {
       return {
         status: "Stable",
         icon: "🟢",
-        message:
-          "Recent cognitive performance and daily routine adherence are stable.",
-        action: "Continue regular cognitive activities and daily routines.",
+        message: t("overallStableMessage"),
+        action: t("overallStableAction"),
         level: "stable",
       };
     }
@@ -204,10 +248,8 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
       return {
         status: "Needs Attention",
         icon: "🔴",
-        message:
-          "Recent activity or routine adherence shows areas that need caregiver attention.",
-        action:
-          "Review lower-performing activities and encourage the recommended cognitive activity.",
+        message: t("overallNeedsAttentionMessage"),
+        action: t("overallNeedsAttentionAction"),
         level: "critical",
       };
     }
@@ -215,10 +257,8 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
     return {
       status: "Monitor",
       icon: "🟡",
-      message:
-        "Some recent areas show room for improvement and should be monitored.",
-      action:
-        "Encourage regular cognitive activities and follow up on missed reminders.",
+        message: t("overallMonitorMessage"),
+        action: t("overallMonitorAction"),
       level: "warning",
     };
   };
@@ -231,7 +271,7 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
         return {
           status: "Stable",
           icon: "➡️",
-          message: "Continue activities to establish a clearer trend.",
+          message: t("trendContinueMessage"),
           level: "stable",
         };
       }
@@ -240,8 +280,7 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
         return {
           status: "Improving",
           icon: "📈",
-          message:
-            "Recent accuracy is improving compared with earlier sessions.",
+        message: t("trendImprovingMessage"),
           level: "improving",
         };
       }
@@ -250,8 +289,7 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
         return {
           status: "Declining",
           icon: "📉",
-          message:
-            "Recent accuracy has declined compared with earlier sessions.",
+        message: t("trendDecliningMessage"),
           level: "declining",
         };
       }
@@ -259,7 +297,7 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
       return {
         status: "Stable",
         icon: "➡️",
-        message: "Recent accuracy is relatively stable.",
+        message: t("trendStableMessage"),
         level: "stable",
       };
     }
@@ -267,7 +305,7 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
     return {
       status: "Stable",
       icon: "➡️",
-      message: "Not enough recent data to determine a trend.",
+      message: t("trendNotEnoughData"),
       level: "stable",
     };
   };
@@ -306,31 +344,30 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
       return {
         status: "Declining",
         icon: "📉",
-        message:
-          "Multiple cognitive activities show a recent decline and should be monitored closely.",
+        message: t("trendMultipleDecline"),
       };
     }
 
     if (decliningCount === 1) {
       const decliningActivity = [
         {
-          name: "Memory",
+          name: t("memory"),
           trend: memoryTrend,
         },
         {
-          name: "Attention",
+          name: t("attention"),
           trend: attentionTrend,
         },
         {
-          name: "Routine Recall",
+          name: t("routineRecall"),
           trend: routineRecallTrend,
         },
         {
-          name: "Pattern Recognition",
+          name: t("patternRecognition"),
           trend: patternTrend,
         },
         {
-          name: "Object Recognition",
+          name: t("objectRecognition"),
           trend: objectRecognitionTrend,
         },
       ].find((item) => item.trend.level === "declining");
@@ -338,7 +375,7 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
       return {
         status: "Needs Monitoring",
         icon: "⚠️",
-        message: `${decliningActivity.name} shows a recent decline and should be monitored.`,
+        message: formatText("trendDecliningActivity", { activity: decliningActivity.name }),
       };
     }
 
@@ -346,8 +383,7 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
       return {
         status: "Improving",
         icon: "📈",
-        message:
-          "Recent cognitive performance is improving across multiple activities.",
+        message: t("trendImprovingMultiple"),
       };
     }
 
@@ -355,16 +391,14 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
       return {
         status: "Generally Improving",
         icon: "📈",
-        message:
-          "Recent performance is improving in some cognitive activities while other areas remain stable.",
+        message: t("trendImprovingSome"),
       };
     }
 
     return {
       status: "Generally Stable",
       icon: "➡️",
-      message:
-        "Recent cognitive performance is generally stable across the available activities.",
+      message: t("trendStableAvailable"),
     };
   };
 
@@ -375,19 +409,19 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
 
     const activities = [
       {
-        name: "Routine Recall",
+        name: t("routineRecall"),
         value: routineRecallAverage,
-        action: "Encourage regular routine recall practice.",
+        action: t("encourageRoutineRecall"),
       },
       {
-        name: "Pattern Recognition",
+        name: t("patternRecognition"),
         value: patternAverage,
-        action: "Encourage additional pattern recognition practice.",
+        action: t("encouragePatternRecognition"),
       },
       {
-        name: "Object Recognition",
+        name: t("objectRecognition"),
         value: objectRecognitionAverage,
-        action: "Encourage additional object recognition practice.",
+        action: t("encourageObjectRecognition"),
       },
     ];
 
@@ -400,26 +434,26 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
         alerts.push({
           level: "critical",
           icon:
-            activity.name === "Routine Recall"
+            activity.type === "routineRecall"
               ? "🔄"
-              : activity.name === "Pattern Recognition"
+              : activity.type === "pattern"
                 ? "🔷"
                 : "👁️",
-          title: `${activity.name} Performance Alert`,
-          message: `${activity.name} performance is currently ${activity.value}%. Additional support may be needed.`,
+          title: formatText("performanceAlertTitle", { activity: activity.name }),
+          message: formatText("performanceSupportMessage", { activity: activity.name, score: activity.value }),
           action: activity.action,
         });
       } else if (activity.value > 0 && activity.value < 80) {
         alerts.push({
           level: "warning",
           icon:
-            activity.name === "Routine Recall"
+            activity.type === "routineRecall"
               ? "🔄"
-              : activity.name === "Pattern Recognition"
+              : activity.type === "pattern"
                 ? "🔷"
                 : "👁️",
-          title: `${activity.name} Needs Monitoring`,
-          message: `${activity.name} performance is currently ${activity.value}%.`,
+          title: formatText("monitoringAlertTitle", { activity: activity.name }),
+          message: formatText("performanceCurrentMessage", { activity: activity.name, score: activity.value }),
           action: activity.action,
         });
       }
@@ -430,18 +464,17 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
       alerts.push({
         level: "critical",
         icon: "📋",
-        title: "Low Reminder Adherence",
-        message: `The patient has missed ${missed} reminder${missed === 1 ? "" : "s"}.`,
-        action:
-          "Check whether the patient needs help following the daily routine.",
+        title: t("lowReminderAdherence"),
+        message: formatText("lowReminderMessage", { count: missed }),
+        action: t("checkDailyRoutineAction"),
       });
     } else if (adherence && adherenceRate < 80) {
       alerts.push({
         level: "warning",
         icon: "📋",
-        title: "Reminder Adherence Dropping",
-        message: `Reminder adherence is currently ${adherenceRate}%.`,
-        action: "Follow up with the patient about missed reminders.",
+        title: t("droppingReminderAdherence"),
+        message: formatText("reminderAdherenceCurrent", { rate: adherenceRate }),
+        action: t("followUpMissedReminders"),
       });
     }
 
@@ -450,9 +483,9 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
       alerts.push({
         level: memoryAlert.severity || "warning",
         icon: "🧠",
-        title: memoryAlert.title || "Memory Alert",
-        message: memoryAlert.message,
-        action: "Review recent memory activity and encourage regular practice.",
+        title: localizedValue(memoryAlert, "title") || t("memoryAlert"),
+        message: localizedValue(memoryAlert, "message"),
+        action: t("reviewMemoryAction"),
       });
     }
 
@@ -461,10 +494,9 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
       alerts.push({
         level: attentionAlert.severity || "warning",
         icon: "🎯",
-        title: attentionAlert.title || "Attention Alert",
-        message: attentionAlert.message,
-        action:
-          "Review recent attention activity and encourage regular practice.",
+        title: localizedValue(attentionAlert, "title") || t("attentionAlert"),
+        message: localizedValue(attentionAlert, "message"),
+        action: t("reviewAttentionAction"),
       });
     }
 
@@ -490,7 +522,7 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
       const token = localStorage.getItem("mindset_ner_token");
 
       if (!token) {
-        throw new Error("Authentication required.");
+        throw new Error(t("authenticationRequired"));
       }
 
       // Get only patients connected to this caregiver
@@ -508,13 +540,13 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
 
       if (!connectionsResponse.ok) {
         throw new Error(
-          connectionsData.message || "Failed to load connected patients",
+          connectionsData.message || t("failedToLoadConnectedPatients"),
         );
       }
 
       if (!connectionsData.patients || connectionsData.patients.length === 0) {
         throw new Error(
-          "No accepted patients are connected to this caregiver.",
+          t("noAcceptedConnectedPatients"),
         );
       }
 
@@ -590,7 +622,7 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
       ]);
 
       if (!analyticsResponse.ok) {
-        throw new Error("Failed to load dashboard analytics");
+        throw new Error(t("failedToLoadDashboardAnalytics"));
       }
 
       const analyticsData = await analyticsResponse.json();
@@ -629,7 +661,7 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
       } : null);
     } catch (err) {
       console.error(err);
-      setError(err.message || "Unable to load patient information.");
+      setError(err.message || t("unableToLoadPatientInformation"));
     } finally {
       setLoading(false);
     }
@@ -642,12 +674,12 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
       const token = localStorage.getItem("mindset_ner_token");
       const response = await fetch(
         `${API_URL}/api/caregiver-action-plan/${patient._id}/actions/${encodeURIComponent(action.actionKey)}`,
-        { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ status, action: { actionType: action.actionType, recommendation: action.recommendation, reason: action.reason, priority: action.priority } }) },
+        { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ status, action: { actionType: action.actionType, recommendation: action.recommendation, reason: action.reason, recommendationCode: action.recommendationCode, recommendationParams: action.recommendationParams, reasonCode: action.reasonCode, reasonParams: action.reasonParams, reasonSuffixCode: action.reasonSuffixCode, priority: action.priority } }) },
       );
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Unable to update action");
+      if (!response.ok) throw new Error(data.message || t("unableToUpdateAction"));
       if (data.action?.status !== status) {
-        throw new Error("The action was not saved with the requested status.");
+        throw new Error(t("actionNotSaved"));
       }
       setActionPlan((current) => {
         if (!current) return current;
@@ -661,12 +693,12 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
             .sort((a, b) => new Date(b.completedAt || b.dismissedAt || b.updatedAt) - new Date(a.completedAt || a.dismissedAt || a.updatedAt)),
           status: pendingActions.length === 0 ? "Monitor" : current.status,
           summary: pendingActions.length === 0
-            ? "All recommended actions have been handled. Continue regular monitoring."
+            ? t("allRecommendedActionsHandled")
             : current.summary,
         };
       });
     } catch (err) {
-      setError(err.message || "Unable to update action.");
+      setError(err.message || t("unableToUpdateAction"));
     } finally {
       setActionPlanUpdating("");
     }
@@ -769,7 +801,7 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
   if (loading) {
     return (
       <div className="dashboard-page">
-        <div className="dashboard-loading">{ct("loading")}</div>
+        <div className="dashboard-loading">{t("loading")}</div>
       </div>
     );
   }
@@ -778,7 +810,7 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
     return (
       <div className="dashboard-page">
         <button className="back-button" onClick={onBack}>
-          ← Back
+          ← {t("back")}
         </button>
 
         <div className="dashboard-error">{error}</div>
@@ -787,27 +819,28 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
   }
 
   const activityMeta = {
-    memory: { name: ct("memoryActivity"), short: ct("memory"), icon: "🧠" },
-    attention: { name: ct("attentionActivity"), short: ct("attention"), icon: "🎯" },
+    memory: { name: t("memoryActivity"), short: t("memory"), icon: "🧠" },
+    attention: { name: t("attentionActivity"), short: t("attention"), icon: "🎯" },
     routineRecall: {
-      name: ct("routineRecall"),
-      short: ct("routine"),
+      name: t("routineRecall"),
+      short: t("routine"),
       icon: "🔄",
     },
-    pattern: { name: ct("patternRecognition"), short: ct("pattern"), icon: "🔷" },
+    pattern: { name: t("patternRecognition"), short: t("pattern"), icon: "🔷" },
     objectRecognition: {
-      name: ct("objectRecognition"),
-      short: ct("objects"),
+      name: t("objectRecognition"),
+      short: t("objects"),
       icon: "👁️",
     },
-    familyFamiliarity: { name: "Family Familiarity", short: "Family", icon: "👨‍👩‍👧" },
+    familyFamiliarity: { name: t("familyFamiliarity"), short: t("family"), icon: "👨‍👩‍👧" },
   };
 
   const formatDateTime = (value) => {
     if (!value) return "—";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "—";
-    return `${date.toLocaleDateString()} • ${date.toLocaleTimeString([], {
+    const locale = { "en-IN": "en-IN", "hi-IN": "hi-IN", "te-IN": "te-IN", "as-IN": "as-IN", "bn-IN": "bn-IN", "nag-IN": "en-IN" }[language] || "en-IN";
+    return `${date.toLocaleDateString(locale)} • ${date.toLocaleTimeString(locale, {
       hour: "2-digit",
       minute: "2-digit",
     })}`;
@@ -827,26 +860,26 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
     if (!patient) return;
     const escapeHtml = (value) => String(value ?? "—").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     const activityRows = [
-      ["Memory", memoryAverage, memoryTrend.status], ["Attention", attentionAverage, attentionTrend.status], ["Routine Recall", routineRecallAverage, routineRecallTrend.status], ["Pattern Recognition", patternAverage, patternTrend.status], ["Object Recognition", objectRecognitionAverage, objectRecognitionTrend.status],
-    ].map(([name, score, trend]) => `<tr><td>${escapeHtml(name)}</td><td>${score > 0 ? `${escapeHtml(score)}%` : "No completed sessions"}</td><td>${escapeHtml(trend)}</td></tr>`).join("");
-    const alerts = smartAlerts.length ? smartAlerts.map((alert) => `<li><strong>${escapeHtml(alert.title)}</strong><br>${escapeHtml(alert.message)}</li>`).join("") : "<li>No active cognitive or reminder alerts.</li>";
-    const actions = actionPlan?.pendingActions?.length ? actionPlan.pendingActions.map((action) => `<li><strong>${escapeHtml(action.recommendation)}</strong> (${escapeHtml(action.priority)} priority)<br>${escapeHtml(action.reason)}</li>`).join("") : "<li>No pending caregiver actions.</li>";
+      [t("memory"), memoryAverage, memoryTrend.status], [t("attention"), attentionAverage, attentionTrend.status], [t("routineRecall"), routineRecallAverage, routineRecallTrend.status], [t("patternRecognition"), patternAverage, patternTrend.status], [t("objectRecognition"), objectRecognitionAverage, objectRecognitionTrend.status],
+    ].map(([name, score, trend]) => `<tr><td>${escapeHtml(name)}</td><td>${score > 0 ? `${escapeHtml(score)}%` : t("noCompletedSessions")}</td><td>${escapeHtml(statusLabel(trend))}</td></tr>`).join("");
+    const alerts = smartAlerts.length ? smartAlerts.map((alert) => `<li><strong>${escapeHtml(alert.title)}</strong><br>${escapeHtml(alert.message)}</li>`).join("") : `<li>${t("noActiveCognitiveOrReminderAlerts")}</li>`;
+    const actions = actionPlan?.pendingActions?.length ? actionPlan.pendingActions.map((action) => `<li><strong>${escapeHtml(localizedValue(action, "recommendation"))}</strong> (${escapeHtml(statusLabel(action.priority))} ${t("prioritySuffix")})<br>${escapeHtml(localizedValue(action, "reason"))}</li>`).join("") : `<li>${t("noPendingCaregiverActions")}</li>`;
     const progressGraph = overallProgress.length ? (() => {
       const width = 680; const height = 230; const left = 42; const right = 16; const top = 16; const bottom = 35;
       const chartWidth = width - left - right; const chartHeight = height - top - bottom;
       const points = overallProgress.map((item, index) => {
         const x = left + (overallProgress.length === 1 ? chartWidth / 2 : (index * chartWidth) / (overallProgress.length - 1));
         const accuracy = Math.max(0, Math.min(100, Number(item.accuracy) || 0));
-        return { x, y: top + ((100 - accuracy) * chartHeight) / 100, accuracy, label: item.game || `Session ${index + 1}` };
+        return { x, y: top + ((100 - accuracy) * chartHeight) / 100, accuracy, label: item.game || formatText("sessionNumber", { number: index + 1 }) };
       });
       const polyline = points.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(" ");
       const grids = [0, 25, 50, 75, 100].map((value) => { const y = top + ((100 - value) * chartHeight) / 100; return `<line x1="${left}" y1="${y}" x2="${width - right}" y2="${y}" stroke="#dfe9df"/><text x="4" y="${y + 4}" fill="#607366" font-size="10">${value}%</text>`; }).join("");
       const dots = points.map((point) => `<circle cx="${point.x}" cy="${point.y}" r="3.5" fill="#fff" stroke="#2f8b46" stroke-width="2"><title>${escapeHtml(point.label)}: ${point.accuracy}%</title></circle>`).join("");
-      return `<h2>Overall Progress Graph</h2><p class="muted">Accuracy across the selected ${escapeHtml(progressRange === "all" ? "available sessions" : `${progressRange} recent sessions`)}.</p><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Overall cognitive performance graph" style="width:100%;height:auto;border:1px solid #dfe9df;border-radius:8px;background:#fbfefb">${grids}<polyline points="${polyline}" fill="none" stroke="#2f8b46" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>${dots}<text x="${left}" y="${height - 10}" fill="#607366" font-size="10">${escapeHtml(points[0].label)}</text><text x="${width - right}" y="${height - 10}" fill="#607366" font-size="10" text-anchor="end">${escapeHtml(points[points.length - 1].label)}</text></svg>`;
-    })() : "<h2>Overall Progress Graph</h2><p>No completed sessions are available for the progress graph.</p>";
+      return `<h2>${t("overallProgressGraph")}</h2><p class="muted">${t("graphAccuracyDescription")} ${escapeHtml(progressRange === "all" ? t("availableSessions") : `${progressRange} ${t("recentSessions")}`)}.</p><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${t("overallCognitivePerformanceGraph")}" style="width:100%;height:auto;border:1px solid #dfe9df;border-radius:8px;background:#fbfefb">${grids}<polyline points="${polyline}" fill="none" stroke="#2f8b46" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>${dots}<text x="${left}" y="${height - 10}" fill="#607366" font-size="10">${escapeHtml(points[0].label)}</text><text x="${width - right}" y="${height - 10}" fill="#607366" font-size="10" text-anchor="end">${escapeHtml(points[points.length - 1].label)}</text></svg>`;
+    })() : `<h2>${t("overallProgressGraph")}</h2><p>${t("noCompletedSessionsForGraph")}</p>`;
     const reportWindow = window.open("", "_blank");
-    if (!reportWindow) { window.alert("Please allow pop-ups to export the patient analysis as a PDF."); return; }
-    reportWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(patient.name)} - MINDSET-NER Analysis</title><style>@page{size:A4;margin:16mm}*{box-sizing:border-box}body{color:#183a25;font:14px/1.5 Arial,sans-serif}h1{margin:0;font-size:26px}h2{margin:24px 0 8px;color:#28663d;font-size:17px;border-bottom:1px solid #d5e5d6;padding-bottom:5px}p{margin:5px 0}.muted{color:#647568}.status{display:inline-block;margin-top:12px;padding:6px 10px;border-radius:12px;background:#fff0ed;color:#b74535;font-weight:bold}.summary{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:15px}.box{padding:11px;border:1px solid #d7e6d8;border-radius:8px;background:#f8fcf7}table{width:100%;border-collapse:collapse}th,td{padding:8px;border-bottom:1px solid #dfe9df;text-align:left}th{background:#edf7ec}ul{margin:8px 0;padding-left:20px}li{margin:8px 0}footer{margin-top:28px;color:#6b7c6e;font-size:11px}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><h1>MINDSET-NER Patient Analysis</h1><p class="muted">Generated ${escapeHtml(new Date().toLocaleString())}</p><div class="summary"><div class="box"><strong>Patient</strong><br>${escapeHtml(patient.name)}<br><span class="muted">Code: ${escapeHtml(patient.patientCode)}</span></div><div class="box"><strong>Overall Status</strong><br><span class="status">${escapeHtml(overallStatus.status)}</span></div></div><h2>Cognitive Overview</h2><p><strong>Overall trend:</strong> ${escapeHtml(overallTrend.status)}</p><p>${escapeHtml(overallTrend.message)}</p><p><strong>Insight:</strong> ${escapeHtml(cognitiveInsight.message)}</p><table><thead><tr><th>Activity</th><th>Performance</th><th>Recent trend</th></tr></thead><tbody>${activityRows}</tbody></table>${progressGraph}<h2>Predictive Cognitive Analysis</h2><p><strong>Risk level:</strong> ${escapeHtml(cognitiveRisk?.riskLevel || "Not available")} &nbsp; <strong>Confidence:</strong> ${escapeHtml(cognitiveRisk?.confidence ?? "—")}${cognitiveRisk?.confidence != null ? "%" : ""}</p><p>${escapeHtml(cognitiveRisk?.explanation || "Insufficient data for predictive analysis.")}</p><h2>Daily Wellbeing</h2><p><strong>Latest mood:</strong> ${escapeHtml(latestMood?.mood || "No mood check recorded")}${latestMood?.createdAt ? ` (${escapeHtml(formatDateTime(latestMood.createdAt))})` : ""}</p><p><strong>Reminder adherence:</strong> ${adherence ? `${escapeHtml(adherence.adherenceRate)}% (${escapeHtml(adherence.completed)} completed, ${escapeHtml(adherence.missed)} missed)` : "No reminder data available"}</p><h2>Active Alerts</h2><ul>${alerts}</ul><h2>Caregiver Action Plan</h2><ul>${actions}</ul><footer>This report is generated from the patient's current MINDSET-NER dashboard data. It is for caregiver support and monitoring, not a medical diagnosis.</footer><script>window.onload=()=>window.print();</script></body></html>`);
+    if (!reportWindow) { window.alert(t("allowPopupsToExportPdf")); return; }
+    reportWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(patient.name)} - ${t("patientAnalysis")}</title><style>@page{size:A4;margin:16mm}*{box-sizing:border-box}body{color:#183a25;font:14px/1.5 Arial,sans-serif}h1{margin:0;font-size:26px}h2{margin:24px 0 8px;color:#28663d;font-size:17px;border-bottom:1px solid #d5e5d6;padding-bottom:5px}p{margin:5px 0}.muted{color:#647568}.status{display:inline-block;margin-top:12px;padding:6px 10px;border-radius:12px;background:#fff0ed;color:#b74535;font-weight:bold}.summary{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:15px}.box{padding:11px;border:1px solid #d7e6d8;border-radius:8px;background:#f8fcf7}table{width:100%;border-collapse:collapse}th,td{padding:8px;border-bottom:1px solid #dfe9df;text-align:left}th{background:#edf7ec}ul{margin:8px 0;padding-left:20px}li{margin:8px 0}footer{margin-top:28px;color:#6b7c6e;font-size:11px}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><h1>${t("patientAnalysis")}</h1><p class="muted">${t("generated")} ${escapeHtml(new Date().toLocaleString())}</p><div class="summary"><div class="box"><strong>${t("patient")}</strong><br>${escapeHtml(patient.name)}<br><span class="muted">${t("code")}: ${escapeHtml(patient.patientCode)}</span></div><div class="box"><strong>${t("overallStatus")}</strong><br><span class="status">${escapeHtml(statusLabel(overallStatus.status))}</span></div></div><h2>${t("cognitiveOverview")}</h2><p><strong>${t("overallTrend")}:</strong> ${escapeHtml(statusLabel(overallTrend.status))}</p><p>${escapeHtml(overallTrend.message)}</p><p><strong>${t("insight")}:</strong> ${escapeHtml(cognitiveInsight.message)}</p><table><thead><tr><th>${t("activity")}</th><th>${t("performance")}</th><th>${t("recentTrend")}</th></tr></thead><tbody>${activityRows}</tbody></table>${progressGraph}<h2>${t("predictiveCognitiveAnalytics")}</h2><p><strong>${t("riskLevel")}:</strong> ${escapeHtml(statusLabel(cognitiveRisk?.riskLevel || t("notAvailable")))} &nbsp; <strong>${t("confidence")}:</strong> ${escapeHtml(cognitiveRisk?.confidence ?? "—")}${cognitiveRisk?.confidence != null ? "%" : ""}</p><p>${escapeHtml(cognitiveRisk?.explanation || t("insufficientData"))}</p><h2>${t("dailyWellbeing")}</h2><p><strong>${t("latestMood")}:</strong> ${escapeHtml(latestMood?.mood || t("noMoodCheckRecorded"))}${latestMood?.createdAt ? ` (${escapeHtml(formatDateTime(latestMood.createdAt))})` : ""}</p><p><strong>${t("reminderAdherence")}:</strong> ${adherence ? `${escapeHtml(adherence.adherenceRate)}% (${escapeHtml(adherence.completed)} ${t("completed")}, ${escapeHtml(adherence.missed)} ${t("missed")})` : t("noReminderDataAvailable")}</p><h2>${t("activeAlerts")}</h2><ul>${alerts}</ul><h2>${t("caregiverActionPlan")}</h2><ul>${actions}</ul><footer>${t("reportDisclaimer")}</footer><script>window.onload=()=>window.print();</script></body></html>`);
     reportWindow.document.close();
   };
 
@@ -854,28 +887,28 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
     <div className="dashboard-page caregiver-redesign">
       <div className="caregiver-shell">
         <button className="caregiver-back" onClick={onBack}>
-          ← <span>{ct("back")}</span>
+          ← <span>{t("back")}</span>
         </button>
 
         <div className="caregiver-heading-row">
           <div>
-            <p className="eyebrow">{ct("dashboard").toUpperCase()}</p>
-            <h1>{ct("overview")}</h1>
-            <p>{ct("overviewIntro")}</p>
+            <p className="eyebrow">{t("dashboard").toUpperCase()}</p>
+            <h1>{t("overview")}</h1>
+            <p>{t("overviewIntro")}</p>
           </div>
           <div className="caregiver-heading-actions">
-            <button className="export-analysis-button" type="button" onClick={exportPatientAnalysisPdf}>Export Analysis PDF</button>
+            <button className="export-analysis-button" type="button" onClick={exportPatientAnalysisPdf}>{t("exportAnalysisPdf")}</button>
           <label className="activity-range-button">
             <span aria-hidden="true">◷</span>
-            <span className="activity-range-label">{ct("progressRange")}</span>
+            <span className="activity-range-label">{t("progressRange")}</span>
             <select
               value={progressRange}
               onChange={(event) => setProgressRange(event.target.value)}
-              aria-label="Progress chart range"
+              aria-label={t("progressChartRange")}
             >
-              <option value="10">{ct("recentActivity")}</option>
-              <option value="20">20 {ct("recentSessions")}</option>
-              <option value="all">{ct("totalSessions")}</option>
+              <option value="10">{t("recentActivity")}</option>
+              <option value="20">20 {t("recentSessions")}</option>
+              <option value="all">{t("totalSessions")}</option>
             </select>
           </label>
           </div>
@@ -889,15 +922,15 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
               </div>
               <div>
                 <h2>{patient.name}</h2>
-                <p>{ct("patientCode")}: {patient.patientCode || "—"}</p>
-                <span className="active-badge">● {ct("active")}</span>
+                <p>{t("patientCode")}: {patient.patientCode || "—"}</p>
+                <span className="active-badge">● {t("active")}</span>
               </div>
             </div>
             <div className={`patient-status-pill ${overallStatus.level}`}>
               <span>●</span>
               <div>
-                <strong>{caregiverStatus(language, overallStatus.status)}</strong>
-                <small>{ct("overallStatus")}</small>
+                <strong>{statusLabel(overallStatus.status)}</strong>
+                <small>{t("overallStatus")}</small>
               </div>
             </div>
           </section>
@@ -908,36 +941,36 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
         {patient && actionPlan && (
           <section className="caregiver-card caregiver-action-plan">
             <div className="caregiver-section-heading">
-              <p className="eyebrow">{ct("carePlan").toUpperCase()}</p>
-              <h2>🧑‍⚕️ {ct("carePlan")}</h2>
-              <p>{actionPlan.summary}</p>
+              <p className="eyebrow">{t("carePlan").toUpperCase()}</p>
+              <h2>🧑‍⚕️ {t("carePlan")}</h2>
+              <p>{localizedValue(actionPlan, "summary")}</p>
             </div>
             <div className={`action-plan-status ${actionPlan.status.toLowerCase().replace(/\s+/g, "-")}`}>
-              <span>{ct("currentStatus")}</span><strong>{caregiverStatus(language, actionPlan.status)}</strong>
+              <span>{t("currentStatus")}</span><strong>{statusLabel(actionPlan.status)}</strong>
             </div>
-            <h3 className="action-plan-subheading">{ct("pending")}</h3>
+            <h3 className="action-plan-subheading">{t("pending")}</h3>
             {actionPlan.pendingActions.length ? (
               <div className="action-plan-list">
                 {actionPlan.pendingActions.map((action) => (
                   <article className={`action-plan-item ${action.priority} ${action.status}`} key={action.actionKey}>
-                    <div className="action-plan-priority"><span>{caregiverStatus(language, action.priority)}</span><b>{caregiverStatus(language, action.status)}</b></div>
-                    <div className="action-plan-copy"><h3>{action.recommendation}</h3><p><strong>{ct("reason")}: </strong>{action.reason}</p></div>
+                    <div className="action-plan-priority"><span>{statusLabel(action.priority)}</span><b>{statusLabel(action.status)}</b></div>
+                    <div className="action-plan-copy"><h3>{localizedValue(action, "recommendation")}</h3><p><strong>{t("reason")}: </strong>{localizedValue(action, "reason")}</p></div>
                     <div className="action-plan-controls">
-                      <button type="button" disabled={actionPlanUpdating === action.actionKey} onClick={() => updateActionPlanStatus(action, "completed")}>{ct("markCompleted")}</button>
-                      <button type="button" className="dismiss" disabled={actionPlanUpdating === action.actionKey} onClick={() => updateActionPlanStatus(action, "dismissed")}>{ct("dismiss")}</button>
+                      <button type="button" disabled={actionPlanUpdating === action.actionKey} onClick={() => updateActionPlanStatus(action, "completed")}>{t("markCompleted")}</button>
+                      <button type="button" className="dismiss" disabled={actionPlanUpdating === action.actionKey} onClick={() => updateActionPlanStatus(action, "dismissed")}>{t("dismiss")}</button>
                     </div>
                   </article>
                 ))}
               </div>
-            ) : <div className="caregiver-empty-state compact">{actionPlan.summary}</div>}
+            ) : <div className="caregiver-empty-state compact">{localizedValue(actionPlan, "summary")}</div>}
             {actionPlan.historyActions.length > 0 && (
               <div className="action-plan-history">
-                <h3>{ct("history")}</h3>
+                <h3>{t("history")}</h3>
                 {actionPlan.historyActions.map((item) => (
                   <div key={item._id} className={item.status}>
-                    <strong>{item.status === "completed" ? "✓" : "✕"} {item.recommendation}</strong>
-                    <span>{caregiverStatus(language, item.status)} • {caregiverStatus(language, item.priority)} {ct("priority")}</span>
-                    <small>{caregiverStatus(language, item.status)}: {formatDateTime(item.completedAt || item.dismissedAt)}</small>
+                    <strong>{item.status === "completed" ? "✓" : "✕"} {localizedValue(item, "recommendation")}</strong>
+                    <span>{statusLabel(item.status)} • {statusLabel(item.priority)} {t("priority")}</span>
+                    <small>{statusLabel(item.status)}: {formatDateTime(item.completedAt || item.dismissedAt)}</small>
                   </div>
                 ))}
               </div>
@@ -947,17 +980,17 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
         {cognitiveRisk && (
           <section className="caregiver-card cognitive-risk-card">
             <div className="caregiver-section-heading">
-              <p className="eyebrow">{ct("predictive").toUpperCase()}</p>
-              <h2>🧠 {ct("trend")}</h2>
-              <p>{ct("analyticsNote")}</p>
+              <p className="eyebrow">{t("predictive").toUpperCase()}</p>
+              <h2>🧠 {t("trend")}</h2>
+              <p>{t("analyticsNote")}</p>
             </div>
             {!cognitiveRisk.sufficientData ? (
-              <p className="cognitive-risk-insufficient">Insufficient data — {cognitiveRisk.explanation} ({cognitiveRisk.dataPoints} completed sessions available.)</p>
+              <p className="cognitive-risk-insufficient">{t("insufficientData")} — {localizedValue(cognitiveRisk, "explanation")} ({cognitiveRisk.dataPoints} {t("completedSessionsAvailable")})</p>
             ) : (
               <>
-                <div className="cognitive-risk-summary"><div><small>{ct("overallTrend")}</small><strong className={cognitiveRisk.overallStatus.toLowerCase()}>{caregiverStatus(language, cognitiveRisk.overallStatus)}</strong></div><div><small>{ct("riskLevel")}</small><strong className={cognitiveRisk.riskLevel.toLowerCase()}>{caregiverStatus(language, cognitiveRisk.riskLevel)}</strong></div><div><small>{ct("confidence")}</small><strong>{cognitiveRisk.confidence}%</strong></div><div><small>{ct("dataAvailable")}</small><strong>{cognitiveRisk.dataPoints} {ct("recentSessions")}</strong></div></div>
-                <p className="cognitive-risk-explanation">{cognitiveRisk.explanation}</p>
-                <div className="cognitive-risk-trends">{cognitiveRisk.activityTrends.map((trend) => <div key={trend.gameType}><strong>{trend.name}</strong><span className={trend.status.toLowerCase().replace(" ", "-")}>{trend.status}</span>{trend.accuracyChange != null && <small>{trend.previousAccuracy}% → {trend.recentAccuracy}% ({trend.accuracyChange > 0 ? "+" : ""}{trend.accuracyChange}%)</small>}</div>)}</div>
+                <div className="cognitive-risk-summary"><div><small>{t("overallTrend")}</small><strong className={cognitiveRisk.overallStatus.toLowerCase()}>{statusLabel(cognitiveRisk.overallStatus)}</strong></div><div><small>{t("riskLevel")}</small><strong className={cognitiveRisk.riskLevel.toLowerCase()}>{statusLabel(cognitiveRisk.riskLevel)}</strong></div><div><small>{t("confidence")}</small><strong>{cognitiveRisk.confidence}%</strong></div><div><small>{t("dataAvailable")}</small><strong>{cognitiveRisk.dataPoints} {t("recentSessions")}</strong></div></div>
+                <p className="cognitive-risk-explanation">{localizedValue(cognitiveRisk, "explanation")}</p>
+                <div className="cognitive-risk-trends">{cognitiveRisk.activityTrends.map((trend) => <div key={trend.gameType}><strong>{activityLabel(trend.activityCode || trend.name)}</strong><span className={trend.status.toLowerCase().replace(" ", "-")}>{statusLabel(trend.status)}</span>{trend.accuracyChange != null && <small>{trend.previousAccuracy}% → {trend.recentAccuracy}% ({trend.accuracyChange > 0 ? "+" : ""}{trend.accuracyChange}%)</small>}</div>)}</div>
               </>
             )}
           </section>
@@ -968,37 +1001,37 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
             <section className="caregiver-kpi-grid">
               <div className="caregiver-kpi-card">
                 <span>🎮</span>
-                <p>{ct("gamesCompleted")}</p>
+                <p>{t("gamesCompleted")}</p>
                 <strong>{analytics.totalGames}</strong>
-                <small>{ct("totalSessions")}</small>
+                <small>{t("totalSessions")}</small>
               </div>
               <div className="caregiver-kpi-card">
                 <span>⭐</span>
-                <p>{ct("averageScore")}</p>
+                <p>{t("averageScore")}</p>
                 <strong>{analytics.averageScore}%</strong>
-                <small>{ct("acrossActivities")}</small>
+                <small>{t("acrossActivities")}</small>
               </div>
               <div className="caregiver-kpi-card">
                 <span>🎯</span>
-                <p>{ct("averageAccuracy")}</p>
+                <p>{t("averageAccuracy")}</p>
                 <strong>{analytics.averageAccuracy}%</strong>
-                <small>{ct("averageAccuracy")}</small>
+                <small>{t("averageAccuracy")}</small>
               </div>
               <div className="caregiver-kpi-card">
                 <span>📋</span>
-                <p>{ct("adherence")}</p>
+                <p>{t("adherence")}</p>
                 <strong>
                   {adherence ? `${adherence.adherenceRate}%` : "—"}
                 </strong>
-                <small>{ct("reminderCompletion")}</small>
+                <small>{t("reminderCompletion")}</small>
               </div>
             </section>
 
             <section className="caregiver-card performance-overview-card">
               <div className="caregiver-section-heading">
-                <p className="eyebrow">{ct("performance").toUpperCase()}</p>
-                <h2>{ct("performanceOverview")}</h2>
-                <p>{ct("currentPerformance")}</p>
+                <p className="eyebrow">{t("performance").toUpperCase()}</p>
+                <h2>{t("performanceOverview")}</h2>
+                <p>{t("currentPerformance")}</p>
               </div>
               <div className="performance-overview-grid">
                 {[
@@ -1023,14 +1056,14 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
 
             <section className="caregiver-card overall-progress-card">
               <div className="caregiver-section-heading">
-                <p className="eyebrow">{ct("cognitiveTrend").toUpperCase()}</p>
-                <h2>{ct("progress")}</h2>
-                <p>{ct("recentAccuracy")}</p>
+                <p className="eyebrow">{t("cognitiveTrend").toUpperCase()}</p>
+                <h2>{t("progress")}</h2>
+                <p>{t("recentAccuracy")}</p>
               </div>
               <div
                 className={`trend-status-bar ${overallTrend.status.toLowerCase().replace(/\s+/g, "-")}`}
               >
-                {overallTrend.status} <span>{overallTrend.icon}</span>
+                {statusLabel(overallTrend.status)} <span>{overallTrend.icon}</span>
               </div>
               <div className="overall-chart-wrap">
                 {overallProgress.length > 0 ? (
@@ -1046,12 +1079,12 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
                         tickFormatter={(value) => `${value}%`}
                       />
                       <Tooltip
-                        formatter={(value) => [`${value}%`, "Accuracy"]}
+                        formatter={(value) => [`${value}%`, t("accuracy")]}
                       />
                       <Line
                         type="monotone"
                         dataKey="accuracy"
-                        name="Accuracy"
+                        name={t("accuracy")}
                         stroke="#2f8b46"
                         strokeWidth={3}
                         dot={{
@@ -1066,7 +1099,7 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
                   </ResponsiveContainer>
                 ) : (
                   <div className="caregiver-empty-state">
-                    {ct("noProgress")}
+                    {t("noProgress")}
                   </div>
                 )}
               </div>
@@ -1077,18 +1110,18 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
                 <section className="caregiver-card recommendation-card-new">
                   <div className="card-title-icon">💡</div>
                   <div>
-                    <p className="eyebrow">{ct("recommendation").toUpperCase()}</p>
-                    <h2>{ct("try")} {activityLabel(activityRecommendation.activity)}</h2>
-                    <p>{activityRecommendation.reason}</p>
-                    <strong className="recommended-level">{ct("recommendedLevel")} {activityRecommendation.difficulty}</strong>
+                    <p className="eyebrow">{t("recommendation").toUpperCase()}</p>
+                    <h2>{t("try")} {activityLabel(activityRecommendation.activity)}</h2>
+                    <p>{localizedValue(activityRecommendation, "reason")}</p>
+                    <strong className="recommended-level">{t("recommendedLevel")} {activityRecommendation.difficulty}</strong>
                   </div>
                 </section>
               )}
 
               <section className="caregiver-card mood-card-new">
                 <div className="caregiver-section-heading">
-                  <p className="eyebrow">{ct("wellbeing").toUpperCase()}</p>
-                  <h2>{ct("mood")}</h2>
+                  <p className="eyebrow">{t("wellbeing").toUpperCase()}</p>
+                  <h2>{t("mood")}</h2>
                 </div>
                 {latestMood ? (
                   <div className="latest-mood-box">
@@ -1104,13 +1137,13 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
                               : "😢"}
                     </span>
                     <div>
-                      <strong>{latestMood.label}</strong>
+                      <strong>{moodLabel(latestMood.mood, latestMood.label)}</strong>
                       <small>{formatDateTime(latestMood.createdAt)}</small>
                     </div>
                   </div>
                 ) : (
                   <div className="caregiver-empty-state compact">
-                    {ct("noMood")}
+                    {t("noMood")}
                   </div>
                 )}
               </section>
@@ -1119,9 +1152,9 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
             {smartAlerts.length > 0 && (
               <section className="caregiver-card smart-alerts-new">
                 <div className="caregiver-section-heading">
-                  <p className="eyebrow">{ct("insights").toUpperCase()}</p>
-                  <h2>{ct("smartAlerts")}</h2>
-                  <p>{ct("alertsHelp")}</p>
+                  <p className="eyebrow">{t("insights").toUpperCase()}</p>
+                  <h2>{t("smartAlerts")}</h2>
+                  <p>{t("alertsHelp")}</p>
                 </div>
                 <div className="smart-alert-count-new">
                   {smartAlerts.length}
@@ -1150,10 +1183,10 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
                 <section className="caregiver-card adherence-card-new">
                   <div className="adherence-heading-new">
                     <div>
-                      <p className="eyebrow">{ct("reminderAdherence").toUpperCase()}</p>
-                      <h2>{ct("reminders")}</h2>
+                      <p className="eyebrow">{t("reminderAdherence").toUpperCase()}</p>
+                      <h2>{t("reminders")}</h2>
                       <p>
-                        {ct("routineHelp")}
+                        {t("routineHelp")}
                       </p>
                     </div>
                     <div
@@ -1163,24 +1196,24 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
                       }}
                     >
                       <strong>{adherence.adherenceRate}%</strong>
-                      <span>{ct("adherence")}</span>
+                      <span>{t("adherence")}</span>
                     </div>
                   </div>
                   <div className="adherence-stats-new">
                     <div>
                       <span>✅</span>
                       <strong>{adherence.completed}</strong>
-                      <small>{ct("completed")}</small>
+                      <small>{t("completed")}</small>
                     </div>
                     <div>
                       <span>❌</span>
                       <strong>{adherence.missed}</strong>
-                      <small>{ct("missed")}</small>
+                      <small>{t("missed")}</small>
                     </div>
                     <div>
                       <span>📋</span>
                       <strong>{adherence.total}</strong>
-                      <small>{ct("total")}</small>
+                      <small>{t("total")}</small>
                     </div>
                   </div>
                 </section>
@@ -1188,9 +1221,9 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
                 <section className="caregiver-card reminder-history-card-new">
                   <div className="caregiver-section-heading inline-heading">
                     <div>
-                      <p className="eyebrow">{ct("reminderHistory").toUpperCase()}</p>
-                      <h2>{ct("recentReminders")}</h2>
-                      <p>{ct("reminderListHelp")}</p>
+                      <p className="eyebrow">{t("reminderHistory").toUpperCase()}</p>
+                      <h2>{t("recentReminders")}</h2>
+                      <p>{t("reminderListHelp")}</p>
                     </div>
                   </div>
                   {reminderLogs.length > 0 ? (
@@ -1208,7 +1241,7 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
                               <strong>
                                 {log.reminderTitle ||
                                   log.reminderId?.title ||
-                                  ct("reminder")}
+                                  t("reminder")}
                               </strong>
                               <small>
                                 {formatDateTime(
@@ -1220,8 +1253,8 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
                               className={`reminder-history-status ${log.status}`}
                             >
                               {log.status === "completed"
-                                ? ct("completed")
-                                : ct("missed")}
+                                ? t("completed")
+                                : t("missed")}
                             </span>
                           </div>
                         ))}
@@ -1237,13 +1270,13 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
                           }
                           aria-expanded={showAllReminderHistory}
                         >
-                          {showAllReminderHistory ? ct("showLess") : ct("showAll")}
+                          {showAllReminderHistory ? t("showLess") : t("showAll")}
                         </button>
                       )}
                     </>
                   ) : (
                     <div className="caregiver-empty-state compact">
-                      {ct("noReminderHistory")}
+                      {t("noReminderHistory")}
                     </div>
                   )}
                 </section>
@@ -1252,21 +1285,21 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
 
             <section className="caregiver-card sessions-card-new">
               <div className="caregiver-section-heading">
-                <p className="eyebrow">{ct("activityHistory").toUpperCase()}</p>
-                <h2>{ct("recentSessions")}</h2>
+                <p className="eyebrow">{t("activityHistory").toUpperCase()}</p>
+                <h2>{t("recentSessions")}</h2>
                 <p>
-                  {ct("activityHelp")}
+                  {t("activityHelp")}
                 </p>
               </div>
               <div className="activity-filters-new">
                 {[
-                  ["all", ct("all")],
-                  ["memory", ct("memory")],
-                  ["attention", ct("attention")],
-                  ["routineRecall", ct("routine")],
-                  ["pattern", ct("pattern")],
-                  ["objectRecognition", ct("objects")],
-                  ["familyFamiliarity", ct("family")],
+                  ["all", t("all")],
+                  ["memory", t("memory")],
+                  ["attention", t("attention")],
+                  ["routineRecall", t("routine")],
+                  ["pattern", t("pattern")],
+                  ["objectRecognition", t("objects")],
+                  ["familyFamiliarity", t("family")],
                 ].map(([value, label]) => (
                   <button
                     key={value}
@@ -1281,7 +1314,7 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
               <div className="sessions-list-new">
                 {filteredSessions.slice(0, 8).map((session) => {
                   const meta = activityMeta[session.gameType] || {
-                    name: "Cognitive Activity",
+                    name: t("cognitiveActivity"),
                     icon: "🧩",
                   };
                   return (
@@ -1290,26 +1323,26 @@ function CaregiverDashboard({ onBack, language = "en-IN", onLanguageChange = () 
                       <div className="session-info-new">
                         <strong>{meta.name}</strong>
                         <small>
-                          {ct("level")} {session.difficulty} •{" "}
+                          {t("level")} {session.difficulty} •{" "}
                           {formatDateTime(session.createdAt)}
                         </small>
                       </div>
                       <div className="session-score-new">
                         <strong>{session.score}%</strong>
-                        <small>{ct("score")}</small>
+                        <small>{t("score")}</small>
                       </div>
                     </div>
                   );
                 })}
                 {filteredSessions.length === 0 && (
                   <div className="caregiver-empty-state">
-                    {ct("noHistory")}
+                    {t("noHistory")}
                   </div>
                 )}
               </div>
               {filteredSessions.length > 8 && (
                 <button className="view-history-button" type="button">
-                  {ct("viewAllSessions")} →
+                  {t("viewAllSessions")} →
                 </button>
               )}
             </section>

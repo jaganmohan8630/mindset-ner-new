@@ -24,6 +24,9 @@ async function getPerformanceAlert(patientId, gameType) {
         gameType || ""
       } activities are needed before detecting a performance trend.`,
       basedOnSessions: recentSessions.length,
+      titleCode: "insufficientData",
+      messageCode: "performanceAlertNeedMoreSessions",
+      messageParams: { activityCode: gameType, count: recentSessions.length },
     };
   }
 
@@ -59,6 +62,10 @@ async function getPerformanceAlert(patientId, gameType) {
         "Consider monitoring the next few activities.",
       decline: Math.round(decline),
       basedOnSessions: recentSessions.length,
+      titleCode: "performanceDeclineAlertTitle",
+      titleParams: { activityCode: gameType },
+      messageCode: "performanceDeclineAlertMessage",
+      messageParams: { activityCode: gameType },
     };
   }
 
@@ -72,6 +79,10 @@ async function getPerformanceAlert(patientId, gameType) {
         "Continued activities will help determine whether the change persists.",
       decline: Math.round(decline),
       basedOnSessions: recentSessions.length,
+      titleCode: "performanceChangeAlertTitle",
+      titleParams: { activityCode: gameType },
+      messageCode: "performanceChangeAlertMessage",
+      messageParams: { activityCode: gameType },
     };
   }
 
@@ -82,7 +93,11 @@ async function getPerformanceAlert(patientId, gameType) {
     message:
       `Recent ${activityName.toLowerCase()} performance does not show a significant decline.`,
     decline: Math.max(0, Math.round(decline)),
-    basedOnSessions: recentSessions.length,
+      basedOnSessions: recentSessions.length,
+      titleCode: "performanceStableAlertTitle",
+      titleParams: { activityCode: gameType },
+      messageCode: "performanceStableAlertMessage",
+      messageParams: { activityCode: gameType },
   };
 }
 
